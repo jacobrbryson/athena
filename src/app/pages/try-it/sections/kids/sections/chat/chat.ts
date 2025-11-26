@@ -15,6 +15,7 @@ import { ChatPreviewComponent } from './chat-preview/chat-preview';
 })
 export class Chat implements OnInit, OnDestroy {
   @ViewChild(ChatPreviewComponent) chatPreview!: ChatPreviewComponent;
+  @ViewChild(ChatInput) chatInputComponent!: ChatInput;
 
   private chatService = inject(ChatService);
 
@@ -62,6 +63,7 @@ export class Chat implements OnInit, OnDestroy {
       this.isThinking.set(false);
     } finally {
       this.isSending.set(false);
+      this.chatPreview.focusInput();
     }
   }
 }

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from './auth.guard';
 import { Home } from './pages/home/home';
 import { Kids } from './pages/kids/kids';
 import { Login } from './pages/login/login';
@@ -34,9 +35,10 @@ export const routes: Routes = [
     title: 'Athena | See How Athena Learns',
   },
   {
-    path: 'try-it',
+    path: 'dashboard',
     component: TryIt,
-    title: 'Athena | Try It',
+    title: 'Athena | Dashboard',
+    canActivate: [AuthGuard],
   },
   {
     path: 'login',

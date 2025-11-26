@@ -74,6 +74,7 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
+            "poll": 200,
             "tsConfig": "tsconfig.spec.json",
             "assets": [
               "src/favicon.ico",

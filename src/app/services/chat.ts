@@ -78,8 +78,8 @@ export class ChatService {
 
     try {
       const url = storedId
-        ? `${environment.proxyServer}/api/v1/public/session?sessionId=${storedId}`
-        : `${environment.proxyServer}/api/v1/public/session`;
+        ? `${environment.proxyServer}/api/v1/session?sessionId=${storedId}`
+        : `${environment.proxyServer}/api/v1/session`;
 
       const res: any = await firstValueFrom(this.http.get(url));
 
@@ -117,7 +117,7 @@ export class ChatService {
     if (!currentSessionId) return;
 
     try {
-      const url = `${environment.proxyServer}/api/v1/public/message?sessionId=${currentSessionId}`;
+      const url = `${environment.proxyServer}/api/v1/message?sessionId=${currentSessionId}`;
       console.log('ChatService: Fetching message history:', url);
 
       const messages: Message[] = await firstValueFrom(this.http.get<Message[]>(url));
@@ -141,7 +141,7 @@ export class ChatService {
     if (!currentSessionId) return;
 
     try {
-      const url = `${environment.proxyServer}/api/v1/public/session/${currentSessionId}/topic`;
+      const url = `${environment.proxyServer}/api/v1/session/${currentSessionId}/topic`;
       console.log('ChatService: Fetching learning targets:', url);
 
       const targets: Target[] = await firstValueFrom(this.http.get<Target[]>(url));
@@ -170,7 +170,7 @@ export class ChatService {
 
     try {
       // Assuming a new API endpoint for fetching lessons
-      const url = `${environment.proxyServer}/api/v1/public/session/${currentSessionId}/lessons`;
+      const url = `${environment.proxyServer}/api/v1/session/${currentSessionId}/lessons`;
       console.log('ChatService: Fetching recent lessons:', url);
 
       // Assuming the API returns an array of Lesson objects
@@ -199,7 +199,7 @@ export class ChatService {
 
     try {
       const res: any = await firstValueFrom(
-        this.http.post<any>(`${environment.proxyServer}/api/v1/public/message`, {
+        this.http.post<any>(`${environment.proxyServer}/api/v1/message`, {
           text,
           sessionId: currentSessionId,
         })

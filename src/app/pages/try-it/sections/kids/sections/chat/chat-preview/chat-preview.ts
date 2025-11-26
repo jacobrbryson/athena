@@ -5,6 +5,7 @@ import {
   HostListener,
   Input,
   Signal,
+  ViewChild,
   WritableSignal,
 } from '@angular/core';
 import { Message } from 'src/app/services/chat';
@@ -23,6 +24,8 @@ export class ChatPreviewComponent {
   get isDrawerOpen(): boolean {
     return this.drawerOpen;
   }
+
+  @ViewChild(ChatInput) chatInputComponent!: ChatInput;
 
   @Input() messages: Message[] = [];
   @Input({ required: true }) message!: WritableSignal<string>;
@@ -97,5 +100,9 @@ export class ChatPreviewComponent {
     } catch {
       return String(ts);
     }
+  }
+
+  public focusInput() {
+    this.chatInputComponent?.focusInput();
   }
 }

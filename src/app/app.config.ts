@@ -1,13 +1,12 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
-
-import { provideHttpClient } from '@angular/common/http';
 import { routes } from './app.routes';
+import { AuthInterceptor } from './auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -20,6 +19,6 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'disabled',
       })
     ),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([AuthInterceptor])),
   ],
 };
