@@ -14,6 +14,7 @@ export class Breadcrumb implements OnDestroy {
   @Input() label = 'Account Settings';
   @Input() dashboardTooltip = 'Complete your profile to unlock the dashboard';
   @Input() showDashboardCrumb = true;
+  @Input() disableDashboard = true;
 
   isOnProfile = false;
   private sub: Subscription;

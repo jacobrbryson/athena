@@ -1,0 +1,36 @@
+.legal-page {
+  padding: 2rem 1.25rem;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.legal-header h1 {
+  margin: 0.25rem 0;
+  font-size: 2rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.legal-header .lede {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.legal-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.legal-card h2 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.legal-card p {
+  margin: 0 0 0.75rem;
+  color: #334155;
+  line-height: 1.6;
+}

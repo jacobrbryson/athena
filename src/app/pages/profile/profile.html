@@ -1,9 +1,12 @@
 <section class="profile-page">
   <header class="profile-header">
     <div>
-      <app-breadcrumb label="Account Settings"></app-breadcrumb>
+      <app-breadcrumb
+        label="Account Settings"
+        [disableDashboard]="isDashboardDisabled()"
+        dashboardTooltip="Complete your profile to unlock the dashboard"
+      ></app-breadcrumb>
       <h1>Profile</h1>
-      <p class="lede">{{ profileSummary() }}</p>
     </div>
   </header>
 
@@ -22,11 +25,7 @@
         <div class="label">Birthday</div>
         <div class="value">{{ profile()?.birthday || '—' }}</div>
       </div>
-      <div class="row">
-        <div class="label">Guardian Approval</div>
-        <div class="value">{{ profile()?.has_guardian ? 'Yes' : 'No' }}</div>
-      </div>
-      <div class="row">
+      <div class="row" *ngIf="(age() ?? 0) >= 18">
         <div class="label">Roles</div>
         <div class="value">
           <span *ngIf="profile()?.is_guardian">Parent</span>
@@ -40,117 +39,117 @@
 
   <ng-template #editFlow>
     <div class="stepper">
-    <div class="steps">
-      <button
-        class="step"
-        type="button"
-        [class.active]="currentStep() === 1"
-        [disabled]="currentStep() === 1"
-        (click)="goToStep(1)"
-      >
-        1. Basics
-      </button>
-      <button
-        class="step"
-        type="button"
-        [class.active]="currentStep() === 2"
-        [disabled]="currentStep() === 2 || saving() || !form().birthday"
-        (click)="goToStep(2)"
-      >
-        2. Next steps
-      </button>
-    </div>
-
-    <div class="step-card" *ngIf="currentStep() === 1">
-      <p class="eyebrow">Step 1</p>
-      <h2>Confirm your details</h2>
-      <p class="hint">We pulled these from Google; please add your birthday to continue.</p>
-
-      <div class="field">
-        <label>Email</label>
-        <input type="email" [ngModel]="form().email" readonly disabled />
-      </div>
-
-      <div class="field">
-        <label>Full name</label>
-        <input type="text" [ngModel]="form().full_name" readonly disabled />
-      </div>
-
-      <div class="field">
-        <label>Birthday</label>
-        <input type="date" [ngModel]="form().birthday" (ngModelChange)="updateBirthday($event)" />
-      </div>
-      <p class="hint">
-        Athena is designed for users under 18. Kids under 13 need a parent or guardian’s approval,
-        while those 18+ can use the app as a parent and/or teacher.
-      </p>
-
-      <div class="actions">
+      <div class="steps">
         <button
-          class="refresh"
+          class="step"
           type="button"
-          (click)="nextStep()"
-          [disabled]="!form().birthday || saving()"
+          [class.active]="currentStep() === 1"
+          [disabled]="currentStep() === 1"
+          (click)="goToStep(1)"
         >
-          {{ saving() ? 'Saving...' : 'Save and continue' }}
+          1. Basics
+        </button>
+        <button
+          class="step"
+          type="button"
+          [class.active]="currentStep() === 2"
+          [disabled]="currentStep() === 2 || saving() || !form().birthday"
+          (click)="goToStep(2)"
+        >
+          2. Next steps
         </button>
       </div>
-    </div>
 
-    <div class="step-card" *ngIf="currentStep() === 2">
-      <p class="eyebrow">Step 2</p>
-      <h2 *ngIf="ageBucket() === 'under13'">We need a parent to continue</h2>
-      <h2 *ngIf="ageBucket() === 'adult'">How do you want to use Athena?</h2>
+      <div class="step-card" *ngIf="currentStep() === 1">
+        <p class="eyebrow">Step 1</p>
+        <h2>Confirm your details</h2>
+        <p class="hint">We pulled these from Google; please add your birthday to continue.</p>
 
-      <div *ngIf="ageBucket() === 'under13'" class="gate">
-        <div class="gate-header">
-          <span class="gate-icon">⚠️</span>
-          <div>
-            <p><strong>Under 13 requires a parent account.</strong></p>
-            <p>To keep you safe, a parent or guardian needs to sign in and add you as a child.</p>
-          </div>
-        </div>
-        <p class="hint">Please ask a parent to continue from their account.</p>
-        <p class="hint">
-          Enter your parent or guardian's email and we'll send them a link to get started.
-        </p>
         <div class="field">
-          <label>Parent or guardian email</label>
-          <input type="email" placeholder="parent@example.com" />
+          <label>Email</label>
+          <input type="email" [ngModel]="form().email" readonly disabled />
         </div>
-        <div class="actions">
-          <button class="refresh" type="button">Send invite</button>
-        </div>
-      </div>
 
-      <div *ngIf="ageBucket() === 'adult'" class="selector">
-        <p class="hint">Select all that apply:</p>
-        <label class="chip">
-          <input type="checkbox" [checked]="form().is_guardian" (change)="toggleRole('parent')" />
-          <span>Parent</span>
-        </label>
-        <label class="chip">
-          <input type="checkbox" [checked]="form().is_teacher" (change)="toggleRole('teacher')" />
-          <span>Teacher</span>
-        </label>
-        <p class="hint">You can choose one or both.</p>
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" [ngModel]="form().full_name" readonly disabled />
+        </div>
+
+        <div class="field">
+          <label>Birthday</label>
+          <input type="date" [ngModel]="form().birthday" (ngModelChange)="updateBirthday($event)" />
+        </div>
+        <p class="hint">
+          Athena's Learning Companion is designed for users under 18. Kids under 13 need a parent or
+          guardian’s approval, while those 18+ can use the app as a parent and/or teacher.
+        </p>
+
         <div class="actions">
           <button
             class="refresh"
             type="button"
-            (click)="goToDashboard()"
-            [disabled]="!canContinueAdult()"
+            (click)="nextStep()"
+            [disabled]="!form().birthday || saving()"
           >
-            Save and continue
+            {{ saving() ? 'Saving...' : 'Save and continue' }}
           </button>
         </div>
       </div>
 
-      <div *ngIf="ageBucket() === 'unknown'" class="gate">
-        <p>We need your birthday to determine the right experience.</p>
-        <button class="ghost" type="button" (click)="currentStep.set(1)">Back to birthday</button>
+      <div class="step-card" *ngIf="currentStep() === 2">
+        <p class="eyebrow">Step 2</p>
+        <h2 *ngIf="ageBucket() === 'under13'">We need a parent to continue</h2>
+        <h2 *ngIf="ageBucket() === 'adult'">How do you want to use Athena?</h2>
+
+        <div *ngIf="ageBucket() === 'under13'" class="gate">
+          <div class="gate-header">
+            <span class="gate-icon">⚠️</span>
+            <div>
+              <p><strong>Under 13 requires a parent account.</strong></p>
+              <p>To keep you safe, a parent or guardian needs to sign in and add you as a child.</p>
+            </div>
+          </div>
+          <p class="hint">Please ask a parent to continue from their account.</p>
+          <p class="hint">
+            Enter your parent or guardian's email and we'll send them a link to get started.
+          </p>
+          <div class="field">
+            <label>Parent or guardian email</label>
+            <input type="email" placeholder="parent@example.com" />
+          </div>
+          <div class="actions">
+            <button class="refresh" type="button">Send invite</button>
+          </div>
+        </div>
+
+        <div *ngIf="ageBucket() === 'adult'" class="selector">
+          <p class="hint">Select all that apply:</p>
+          <label class="chip">
+            <input type="checkbox" [checked]="form().is_guardian" (change)="toggleRole('parent')" />
+            <span>Parent</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" [checked]="form().is_teacher" (change)="toggleRole('teacher')" />
+            <span>Teacher</span>
+          </label>
+          <p class="hint">You can choose one or both.</p>
+          <div class="actions">
+            <button
+              class="refresh"
+              type="button"
+              (click)="goToDashboard()"
+              [disabled]="!canContinueAdult()"
+            >
+              Save and continue
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="ageBucket() === 'unknown'" class="gate">
+          <p>We need your birthday to determine the right experience.</p>
+          <button class="ghost" type="button" (click)="currentStep.set(1)">Back to birthday</button>
+        </div>
       </div>
     </div>
-  </div>
   </ng-template>
 </section>

@@ -50,7 +50,8 @@ export class Profile implements OnInit {
 
   age = computed<number | null>(() => {
     const dob = this.profile()?.birthday || this.form().birthday;
-    return dob ? this.ageFromBirthday(dob) : null;
+    const computedAge = dob ? this.ageFromBirthday(dob) : null;
+    return computedAge;
   });
 
   ageBucket = computed<'under13' | 'teen' | 'adult' | 'unknown'>(() => {
@@ -69,24 +70,14 @@ export class Profile implements OnInit {
 
   refresh() {
     this.profileService.fetchProfile().then((p) => {
-      if (p && this.hasProfile()) {
-        this.prefillFromProfile();
-        const complete = this.profileComplete();
-        this.editing.set(!complete);
-        this.currentStep.set(complete ? 0 : 1);
-      }
+      this.syncFromProfile();
     });
   }
 
   ngOnInit(): void {
     this.prefillFromToken();
-    // Try to land on view mode if a profile already exists.
-    if (this.hasProfile()) {
-      this.prefillFromProfile();
-      const complete = this.profileComplete();
-      this.editing.set(!complete);
-      this.currentStep.set(complete ? 0 : 1);
-    }
+    // Always fetch latest profile, then hydrate the form/state.
+    this.profileService.fetchProfile().then(() => this.syncFromProfile());
   }
 
   nextStep() {
@@ -150,6 +141,10 @@ export class Profile implements OnInit {
           this.router.navigate(['/dashboard']);
           return;
         }
+        // age >= 18 -> force step 2 to set roles
+        this.currentStep.set(2);
+        this.editing.set(true);
+        return;
       }
 
       // Adult flow: if roles are set, exit edit mode; otherwise stay on step 2.
@@ -210,6 +205,27 @@ export class Profile implements OnInit {
     this.currentStep.set(1);
   }
 
+  private syncFromProfile() {
+    const p = this.profile();
+    if (!p || !this.hasProfile()) return;
+
+    const age = p.birthday ? this.ageFromBirthday(p.birthday) : null;
+    const missingBirthday = !p.birthday;
+    const under13NeedsGuardian = age !== null && age < 13 && !p.has_guardian;
+    const adultNeedsRole = age !== null && age >= 18 && !(p.is_guardian || p.is_teacher);
+
+    this.prefillFromProfile();
+
+    if (missingBirthday || under13NeedsGuardian || adultNeedsRole) {
+      this.editing.set(true);
+      this.currentStep.set(2);
+      return;
+    }
+
+    this.editing.set(false);
+    this.currentStep.set(0);
+  }
+
   private prefillFromToken() {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
@@ -236,6 +252,7 @@ export class Profile implements OnInit {
   private prefillFromProfile() {
     const p = this.profile();
     if (!p) return;
+
     this.form.update((f) => ({
       ...f,
       full_name: p.full_name || (p as any).name || f.full_name,
@@ -254,6 +271,19 @@ export class Profile implements OnInit {
     if (age < 13) return !!profile.has_guardian;
     if (age >= 18) return !!(profile.is_guardian || profile.is_teacher);
     return true;
+  }
+
+  isDashboardDisabled(): boolean {
+    const p = this.profile();
+    if (!p || !p.birthday) return true;
+
+    const age = this.ageFromBirthday(p.birthday);
+    if (age === null) return true;
+
+    if (age < 13 && !p.has_guardian) return true;
+    if (age >= 18 && !(p.is_guardian || p.is_teacher)) return true;
+
+    return false;
   }
 
   private ageFromBirthday(birthday: string): number | null {

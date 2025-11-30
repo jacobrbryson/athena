@@ -1,6 +1,6 @@
 .profile-page {
   width: 100%;
-  padding: 1.25rem 1.25rem 4rem;
+  padding: 1.5rem 1.25rem 4rem;
   color: #0f172a;
 }
 
@@ -11,6 +11,10 @@
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
+}
+
+.profile-header > div {
+  width: 100%;
 }
 
 .eyebrow {

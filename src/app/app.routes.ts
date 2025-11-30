@@ -9,6 +9,8 @@ import { SeeHowAthenaLearns } from './pages/see-how-athena-learns/see-how-athena
 import { Teachers } from './pages/teachers/teachers';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { ProfileGuard } from './profile.guard';
+import { TermsOfService } from './pages/terms-of-service/terms-of-service';
+import { PrivacyPolicy } from './pages/privacy-policy/privacy-policy';
 
 export const routes: Routes = [
   {
@@ -52,6 +54,16 @@ export const routes: Routes = [
     path: 'login',
     component: Login,
     title: 'Athena | Login',
+  },
+  {
+    path: 'terms-of-service',
+    component: TermsOfService,
+    title: 'Athena | Terms of Service',
+  },
+  {
+    path: 'privacy-policy',
+    component: PrivacyPolicy,
+    title: 'Athena | Privacy Policy',
   },
   {
     path: '**',

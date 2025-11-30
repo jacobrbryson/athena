@@ -6,10 +6,43 @@
   margin-bottom: 1rem;
 }
 
-.adult-card {
+.tab-header {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  transition: all 140ms ease;
+}
+
+.tab-btn:hover {
+  color: #0f172a;
+  border-color: #cbd5e1;
+  background: #e2e8f0;
+}
+
+.tab-btn.active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+}
+
+.tab-body {
+  margin-top: 0.5rem;
+}
+
+.tab-card {
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
 }

@@ -1,14 +1,46 @@
 <section class="dashboard">
   <header class="dashboard-header">
-    <app-breadcrumb label="Dashboard" [showDashboardCrumb]="false"></app-breadcrumb>
+    <app-breadcrumb
+      [label]="breadcrumbLabel()"
+      [showDashboardCrumb]="true"
+      [disableDashboard]="true"
+      dashboardTooltip=""
+    ></app-breadcrumb>
   </header>
 
   <ng-container *ngIf="!loading(); else loadingTpl">
     <app-kids *ngIf="viewMode() === 'kid'"></app-kids>
 
-    <div *ngIf="viewMode() === 'adult'" class="adult-card">
-      <h1>Welcome back</h1>
-      <p>You’re signed in as a parent and/or teacher. More tools coming soon.</p>
+    <div *ngIf="viewMode() === 'adult'">
+      <div class="tab-body tab-card">
+        <ng-container *ngIf="isParent() && isTeacher(); else singleRole">
+          <div class="tab-header">
+            <button
+              class="tab-btn"
+              type="button"
+              [class.active]="activeAdultTab() === 'teacher'"
+              (click)="activeAdultTab.set('teacher')"
+            >
+              Teacher
+            </button>
+            <button
+              class="tab-btn"
+              type="button"
+              [class.active]="activeAdultTab() === 'parent'"
+              (click)="activeAdultTab.set('parent')"
+            >
+              Parent
+            </button>
+          </div>
+          <app-teachers *ngIf="activeAdultTab() === 'teacher'"></app-teachers>
+          <app-parents *ngIf="activeAdultTab() === 'parent'"></app-parents>
+        </ng-container>
+
+        <ng-template #singleRole>
+          <app-teachers *ngIf="isTeacher() && !isParent()"></app-teachers>
+          <app-parents *ngIf="isParent() && !isTeacher()"></app-parents>
+        </ng-template>
+      </div>
     </div>
   </ng-container>
 
