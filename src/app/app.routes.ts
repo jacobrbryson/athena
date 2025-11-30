@@ -4,9 +4,11 @@ import { Home } from './pages/home/home';
 import { Kids } from './pages/kids/kids';
 import { Login } from './pages/login/login';
 import { Parents } from './pages/parents/parents';
+import { Profile } from './pages/profile/profile';
 import { SeeHowAthenaLearns } from './pages/see-how-athena-learns/see-how-athena-learns';
 import { Teachers } from './pages/teachers/teachers';
-import { TryIt } from './pages/try-it/try-it';
+import { Dashboard } from './pages/dashboard/dashboard';
+import { ProfileGuard } from './profile.guard';
 
 export const routes: Routes = [
   {
@@ -36,8 +38,14 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    component: TryIt,
+    component: Dashboard,
     title: 'Athena | Dashboard',
+    canActivate: [AuthGuard, ProfileGuard],
+  },
+  {
+    path: 'profile',
+    component: Profile,
+    title: 'Athena | Profile',
     canActivate: [AuthGuard],
   },
   {

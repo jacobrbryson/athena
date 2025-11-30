@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-nav',
@@ -10,9 +10,15 @@ import { Router, RouterLink } from '@angular/router';
 })
 export class Nav {
   isLoggedIn = signal<boolean>(false);
+  menuOpen = signal<boolean>(false);
 
   constructor(private router: Router) {
     this.checkLoginStatus();
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.checkLoginStatus();
+      }
+    });
   }
 
   /**
@@ -42,5 +48,14 @@ export class Nav {
     this.isLoggedIn.set(false);
     this.router.navigate(['/']);
     window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token' }));
+    this.menuOpen.set(false);
+  }
+
+  toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  closeMenu(): void {
+    this.menuOpen.set(false);
   }
 }

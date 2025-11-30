@@ -1,0 +1,20 @@
+<section class="dashboard">
+  <header class="dashboard-header">
+    <app-breadcrumb label="Dashboard" [showDashboardCrumb]="false"></app-breadcrumb>
+  </header>
+
+  <ng-container *ngIf="!loading(); else loadingTpl">
+    <app-kids *ngIf="viewMode() === 'kid'"></app-kids>
+
+    <div *ngIf="viewMode() === 'adult'" class="adult-card">
+      <h1>Welcome back</h1>
+      <p>You’re signed in as a parent and/or teacher. More tools coming soon.</p>
+    </div>
+  </ng-container>
+
+  <ng-template #loadingTpl>
+    <div class="adult-card">
+      <p>Loading dashboard...</p>
+    </div>
+  </ng-template>
+</section>
