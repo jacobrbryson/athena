@@ -10,6 +10,8 @@
     </div>
   </header>
 
+  <div class="grid gap-5 items-start lg:grid-cols-3">
+    <div class="lg:col-span-2">
   <ng-container *ngIf="profileComplete() && !editing(); else editFlow">
     <div class="summary-card">
       <div class="summary-header">
@@ -115,11 +117,28 @@
           </p>
           <div class="field">
             <label>Parent or guardian email</label>
-            <input type="email" placeholder="parent@example.com" />
+            <input
+              type="email"
+              placeholder="parent@example.com"
+              [ngModel]="parentEmail()"
+              (ngModelChange)="onParentEmailChange($event)"
+              [class.error]="!!parentEmailError()"
+              data-sitekey="6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5"
+            />
+            <p class="error" *ngIf="parentEmailError()">{{ parentEmailError() }}</p>
           </div>
           <div class="actions">
-            <button class="refresh" type="button">Send invite</button>
+            <button
+              class="refresh"
+              type="button"
+              (click)="sendParentInvite()"
+              [disabled]="sendingInvite() || !!parentEmailError() || !parentEmail()"
+            >
+              {{ sendingInvite() ? 'Sending...' : 'Send invite' }}
+            </button>
+            <p class="hint success" *ngIf="inviteMessage()">{{ inviteMessage() }}</p>
           </div>
+          <div id="recaptcha-container" hidden data-sitekey="6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5"></div>
         </div>
 
         <div *ngIf="ageBucket() === 'adult'" class="selector">
@@ -152,4 +171,96 @@
       </div>
     </div>
   </ng-template>
+
+    </div>
+
+  <section
+    class="card blocklist-card lg:mt-0"
+    *ngIf="ageBucket() === 'adult'; else guardiansCard"
+  >
+    <div class="blocklist-header">
+      <div>
+        <p class="eyebrow">Blocked requests</p>
+        <p class="hint">Children you blocked will not be able to request access again.</p>
+      </div>
+    </div>
+
+    <ng-container *ngIf="blocklistLoading(); else blocklistContent">
+      <p class="hint">Loading blocked requests...</p>
+    </ng-container>
+    <ng-template #blocklistContent>
+      <div *ngIf="blocklist().length; else emptyBlocklist" class="blocklist-list">
+        <div class="blocked-row" *ngFor="let blocked of blocklist()">
+          <div class="blocked-meta">
+            <p class="blocked-name">{{ blocked.full_name || 'Unknown child' }}</p>
+            <p class="blocked-email">{{ blocked.email || 'Email unavailable' }}</p>
+            <p class="blocked-date" [title]="formatBlockedTimestamp(blocked.blocked_at)">
+              Blocked {{ formatBlockedRelative(blocked.blocked_at) }}
+            </p>
+          </div>
+          <div class="blocked-actions">
+              <button
+                class="ghost"
+                type="button"
+                (click)="unblockChild(blocked.child_profile_id, false, blocked.full_name)"
+                [disabled]="blocklistAction()"
+              >
+                Unblock
+              </button>
+              <button
+                class="refresh"
+                type="button"
+                (click)="unblockChild(blocked.child_profile_id, true, blocked.full_name)"
+                [disabled]="blocklistAction()"
+              >
+                Unblock & add child
+              </button>
+          </div>
+        </div>
+      </div>
+      <ng-template #emptyBlocklist>
+        <div class="empty">
+          <p class="blocked-name">No blocked requests</p>
+          <p class="hint">When you block a request, it will appear here with an option to undo.</p>
+        </div>
+      </ng-template>
+    </ng-template>
+  </section>
+  <ng-template #guardiansCard>
+    <section class="card blocklist-card lg:mt-0">
+      <div class="blocklist-header">
+        <div>
+          <p class="eyebrow">Parents / Guardians</p>
+          <p class="hint">People linked to your account as guardians.</p>
+        </div>
+      </div>
+
+      <ng-container *ngIf="guardiansLoading(); else guardiansContent">
+        <p class="hint">Loading parents/guardians...</p>
+      </ng-container>
+      <ng-template #guardiansContent>
+        <div *ngIf="guardians().length; else emptyGuardians" class="blocklist-list">
+          <div class="blocked-row" *ngFor="let guardian of guardians()">
+            <div class="blocked-meta">
+              <p class="blocked-name">{{ guardian.full_name || 'Guardian' }}</p>
+              <p class="blocked-email">{{ guardian.email || 'Email unavailable' }}</p>
+              <p
+                class="blocked-date"
+                [title]="formatBlockedTimestamp(guardian.approved_at || guardian.invited_at)"
+              >
+                Linked {{ formatBlockedRelative(guardian.approved_at || guardian.invited_at) }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <ng-template #emptyGuardians>
+          <div class="empty">
+            <p class="blocked-name">No parents or guardians linked</p>
+            <p class="hint">Ask a parent or guardian to connect to your account.</p>
+          </div>
+        </ng-template>
+      </ng-template>
+    </section>
+  </ng-template>
+  </div>
 </section>

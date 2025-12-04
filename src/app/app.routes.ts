@@ -5,6 +5,7 @@ import { Kids } from './pages/kids/kids';
 import { Login } from './pages/login/login';
 import { Parents } from './pages/parents/parents';
 import { Profile } from './pages/profile/profile';
+import { ProfileOptions } from './pages/profile-options/profile-options';
 import { SeeHowAthenaLearns } from './pages/see-how-athena-learns/see-how-athena-learns';
 import { Teachers } from './pages/teachers/teachers';
 import { Dashboard } from './pages/dashboard/dashboard';
@@ -13,6 +14,12 @@ import { TermsOfService } from './pages/terms-of-service/terms-of-service';
 import { PrivacyPolicy } from './pages/privacy-policy/privacy-policy';
 
 export const routes: Routes = [
+  {
+    path: 'profile/:uuid/options',
+    component: ProfileOptions,
+    title: 'Athena | Child Options',
+    canActivate: [AuthGuard],
+  },
   {
     path: '',
     component: Home,
@@ -48,6 +55,13 @@ export const routes: Routes = [
     path: 'profile',
     component: Profile,
     title: 'Athena | Profile',
+    pathMatch: 'full',
+    canActivate: [AuthGuard],
+  },
+  {
+    path: 'profile/:uuid/options',
+    component: ProfileOptions,
+    title: 'Athena | Child Options',
     canActivate: [AuthGuard],
   },
   {

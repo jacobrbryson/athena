@@ -1,24 +1,31 @@
-import { NgIf } from '@angular/common';
+import { NgFor, NgIf } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Profile as ProfileModel, ProfileService } from 'src/app/services/profile';
 import { Breadcrumb } from 'src/app/shared/breadcrumb/breadcrumb';
 
+declare const grecaptcha: any;
+
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [NgIf, FormsModule, Breadcrumb],
+  imports: [NgIf, NgFor, FormsModule, Breadcrumb],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
 })
 export class Profile implements OnInit {
-  private profileService = inject(ProfileService);
+  profileService = inject(ProfileService);
   private router = inject(Router);
 
   profile = this.profileService.profile;
   loading = this.profileService.loading;
   saving = this.profileService.saving;
+  blocklist = this.profileService.blocklist;
+  blocklistLoading = this.profileService.blocklistLoading;
+  blocklistAction = this.profileService.blocklistAction;
+  guardians = this.profileService.guardians;
+  guardiansLoading = this.profileService.guardiansLoading;
 
   editing = signal<boolean>(true);
   currentStep = signal<0 | 1 | 2>(1); // 0 = viewing existing profile, 1 = basics, 2 = post-save follow-up
@@ -67,17 +74,30 @@ export class Profile implements OnInit {
   dislikeSubjects = ['Math', 'Science', 'History', 'Art', 'Music', 'Language Arts', 'Coding'];
   dislikeSelections = signal<Record<string, boolean>>({});
   // Roles (parent/teacher) are tracked on the form to sync with the profile model.
+  parentEmail = signal<string>('');
+  parentEmailError = signal<string | null>(null);
+  sendingInvite = signal<boolean>(false);
+  inviteMessage = signal<string>('');
+  private recaptchaLoader: Promise<void> | null = null;
+  private static readonly RECAPTCHA_SITE_KEY = '6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5';
 
   refresh() {
     this.profileService.fetchProfile().then((p) => {
       this.syncFromProfile();
     });
+    this.profileService.fetchBlocklist();
   }
 
   ngOnInit(): void {
     this.prefillFromToken();
     // Always fetch latest profile, then hydrate the form/state.
-    this.profileService.fetchProfile().then(() => this.syncFromProfile());
+    this.profileService
+      .fetchProfile()
+      .then(() => {
+        this.syncFromProfile();
+        this.profileService.fetchBlocklist();
+        this.profileService.fetchGuardians();
+      });
   }
 
   nextStep() {
@@ -181,6 +201,96 @@ export class Profile implements OnInit {
     }));
   }
 
+  onParentEmailChange(value: string) {
+    this.parentEmail.set(value);
+    this.parentEmailError.set(this.validateParentEmail(value) ? null : 'Enter a valid email.');
+  }
+
+  private validateParentEmail(value: string): boolean {
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(trimmed);
+  }
+
+  private async loadRecaptcha(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    if ((window as any).grecaptcha?.enterprise || (window as any).grecaptcha) return;
+    if (this.recaptchaLoader) return this.recaptchaLoader;
+
+    this.recaptchaLoader = new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = `https://www.google.com/recaptcha/enterprise.js?render=${Profile.RECAPTCHA_SITE_KEY}`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        this.recaptchaLoader = null;
+        reject(new Error('Failed to load reCAPTCHA'));
+      };
+      document.head.appendChild(script);
+    });
+
+    return this.recaptchaLoader;
+  }
+
+  private async getExecuteFunction(): Promise<{
+    execute: (siteKey: string, opts: any) => Promise<string>;
+    ready: (cb: () => void) => void;
+  }> {
+    const start = Date.now();
+    const timeoutMs = 5000;
+    while (Date.now() - start < timeoutMs) {
+      const captcha: any = (typeof window !== 'undefined' && (window as any).grecaptcha) || grecaptcha;
+      if (captcha) {
+        const readyFn =
+          (captcha.enterprise?.ready && captcha.enterprise.ready.bind(captcha.enterprise)) ||
+          (captcha.ready && captcha.ready.bind(captcha));
+        const execute =
+          (captcha.enterprise?.execute && captcha.enterprise.execute.bind(captcha.enterprise)) ||
+          (captcha.execute && captcha.execute.bind(captcha));
+        if (readyFn && execute) {
+          return { execute, ready: readyFn };
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error('reCAPTCHA execute is not available');
+  }
+
+  private async executeRecaptcha(action: string): Promise<string> {
+    await this.loadRecaptcha();
+    const { execute, ready } = await this.getExecuteFunction();
+    await new Promise<void>((resolve) => ready(resolve));
+    return execute(Profile.RECAPTCHA_SITE_KEY, { action });
+  }
+
+  async sendParentInvite() {
+    const email = this.parentEmail().trim().toLowerCase();
+    if (!this.validateParentEmail(email)) {
+      this.parentEmailError.set('Enter a valid email.');
+      return;
+    }
+
+    if (this.sendingInvite()) return;
+    this.sendingInvite.set(true);
+    this.inviteMessage.set('');
+
+    try {
+      const token = await this.executeRecaptcha('invite_parent');
+      const ok = await this.profileService.sendParentInvite(email, token);
+      if (ok) {
+        this.inviteMessage.set('Invite sent! Ask your parent/guardian to check their email.');
+      }
+    } catch (err: any) {
+      console.error('Failed to send parent invite', err);
+      this.parentEmailError.set(err?.message || 'Unable to send invite right now.');
+    } finally {
+      this.sendingInvite.set(false);
+    }
+  }
+
   async goToDashboard() {
     const data = this.form();
     // Persist role choices before navigating.
@@ -203,6 +313,14 @@ export class Profile implements OnInit {
   startEdit() {
     this.editing.set(true);
     this.currentStep.set(1);
+  }
+
+  async unblockChild(childProfileId: number, addChild: boolean, childName?: string) {
+    await this.profileService.unblockChild(childProfileId, addChild, childName);
+    // Refresh profile state in case a child relationship was added.
+    if (addChild) {
+      await this.profileService.fetchProfile();
+    }
   }
 
   private syncFromProfile() {
@@ -296,5 +414,66 @@ export class Profile implements OnInit {
       age--;
     }
     return age;
+  }
+
+  private parseBlockedDate(value?: string | Date): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) {
+      const d = value;
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    // If the server returns "YYYY-MM-DD HH:mm:ss" without a timezone, treat it as UTC.
+    const looksLikeSql = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(trimmed);
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
+
+    const candidate = looksLikeSql && !hasTz ? new Date(trimmed.replace(' ', 'T') + 'Z') : new Date(trimmed);
+    if (Number.isNaN(candidate.getTime())) return null;
+    return candidate;
+  }
+
+  formatBlockedTimestamp(value?: string) {
+    const date = this.parseBlockedDate(value);
+    if (!date) return 'Unknown time';
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
+
+  formatBlockedRelative(value?: string) {
+    const date = this.parseBlockedDate(value);
+    if (!date) return 'recently';
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return 'just now';
+
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+
+    const formatter = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    if (diffDays === 1) return `yesterday at ${formatter.format(date)}`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+
+    const dateFormatter = new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+    return dateFormatter.format(date);
   }
 }

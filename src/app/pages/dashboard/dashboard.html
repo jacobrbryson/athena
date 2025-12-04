@@ -19,7 +19,7 @@
               class="tab-btn"
               type="button"
               [class.active]="activeAdultTab() === 'teacher'"
-              (click)="activeAdultTab.set('teacher')"
+              (click)="setAdultTab('teacher')"
             >
               Teacher
             </button>
@@ -27,7 +27,7 @@
               class="tab-btn"
               type="button"
               [class.active]="activeAdultTab() === 'parent'"
-              (click)="activeAdultTab.set('parent')"
+              (click)="setAdultTab('parent')"
             >
               Parent
             </button>

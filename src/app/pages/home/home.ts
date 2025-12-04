@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { Headline } from './sections/headline/headline';
-import { Kids } from './sections/kids/kids';
-import { Parents } from './sections/parents/parents';
-import { Teachers } from './sections/teachers/teachers';
+import { Kids } from 'src/app/pages/home/sections/kids/kids';
+import { Parents } from 'src/app/pages/home/sections/parents/parents';
+import { Teachers } from 'src/app/pages/home/sections/teachers/teachers';
 
 @Component({
   selector: 'app-home',

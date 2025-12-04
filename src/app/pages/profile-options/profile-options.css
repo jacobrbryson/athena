@@ -1,0 +1,17 @@
+.options-page {
+  width: 100%;
+  padding: 1.5rem 1.25rem 4rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+  margin-top: 1rem;
+}
+
+.hint {
+  color: #64748b;
+}

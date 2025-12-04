@@ -6,6 +6,7 @@ import { LearningTargets } from './sections/learning-targets/learning-targets';
 
 @Component({
   selector: 'app-kids',
+  standalone: true,
   templateUrl: './kids.html',
   styleUrls: ['./kids.css'],
   imports: [Chat, LearningTargets, Interests],

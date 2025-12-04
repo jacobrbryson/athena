@@ -19,11 +19,6 @@ export class ToastService {
     // In a real app, this would update a signal/state for the
     // toast component to render.
     console.log(`[Toast ${type.toUpperCase()}]: ${message}`);
-
-    // You would replace the console.log with code to display the toast, e.g.:
-    // this.toastSignal.set({ message, type, isVisible: true });
-
-    // As a placeholder for the actual UI implementation:
-    alert(`Error: ${message}`);
+    // TODO: render a real toast component. Alerts removed to avoid blocking UI.
   }
 }
