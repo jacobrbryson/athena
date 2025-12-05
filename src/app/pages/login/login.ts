@@ -104,10 +104,7 @@ export class Login implements AfterViewInit {
       )
       .subscribe((response) => {
         if (response && response.jwt) {
-          console.log('Backend authentication successful. Received custom JWT.');
           localStorage.setItem('auth_token', response.jwt);
-
-          // 🔑 NEW: Use the stored returnUrl for redirection after successful login
           this.router.navigateByUrl(this.returnUrl);
         } else if (response !== null) {
           console.error('Backend response missing expected JWT field.');

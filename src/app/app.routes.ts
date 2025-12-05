@@ -6,6 +6,10 @@ import { Login } from './pages/login/login';
 import { Parents } from './pages/parents/parents';
 import { Profile } from './pages/profile/profile';
 import { ProfileOptions } from './pages/profile-options/profile-options';
+import { LearningGoals } from './pages/learning-goals/learning-goals';
+import { Activity } from './pages/activity/activity';
+import { About } from './pages/about/about';
+import { Store } from './pages/store/store';
 import { SeeHowAthenaLearns } from './pages/see-how-athena-learns/see-how-athena-learns';
 import { Teachers } from './pages/teachers/teachers';
 import { Dashboard } from './pages/dashboard/dashboard';
@@ -52,11 +56,34 @@ export const routes: Routes = [
     canActivate: [AuthGuard, ProfileGuard],
   },
   {
+    path: 'dashboard/store',
+    component: Store,
+    title: 'Athena | Store',
+    canActivate: [AuthGuard, ProfileGuard],
+  },
+  {
+    path: 'dashboard/profile/:uuid/learning-goals',
+    component: LearningGoals,
+    title: 'Athena | Learning Goals',
+    canActivate: [AuthGuard, ProfileGuard],
+  },
+  {
+    path: 'dashboard/profile/:uuid/activity',
+    component: Activity,
+    title: 'Athena | Activity',
+    canActivate: [AuthGuard, ProfileGuard],
+  },
+  {
     path: 'profile',
     component: Profile,
     title: 'Athena | Profile',
     pathMatch: 'full',
     canActivate: [AuthGuard],
+  },
+  {
+    path: 'about',
+    component: About,
+    title: 'Athena | About',
   },
   {
     path: 'profile/:uuid/options',

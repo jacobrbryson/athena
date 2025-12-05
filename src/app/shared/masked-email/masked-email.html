@@ -1,0 +1,81 @@
+<div *ngIf="variant === 'input'; else inline" class="email-input-row">
+  <input type="text" [value]="emailVisible() ? email : masked" readonly disabled />
+  <button
+    type="button"
+    class="icon-btn"
+    (click)="toggleVisibility()"
+    [attr.aria-pressed]="emailVisible()"
+    [attr.aria-label]="emailVisible() ? 'Hide email' : 'Show email'"
+  >
+    @if (emailVisible()) {
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M9.88 9.88 4.12 4.12" />
+      <path d="M14.12 9.88 19.88 4.12" />
+      <path d="M9.88 14.12 4.12 19.88" />
+      <path d="M14.12 14.12 19.88 19.88" />
+    </svg>
+    } @else {
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+    }
+  </button>
+</div>
+
+<ng-template #inline>
+  <span>{{ emailVisible() ? email : masked }}</span>
+  <button
+    type="button"
+    class="icon-btn inline-btn"
+    (click)="toggleVisibility()"
+    [attr.aria-pressed]="emailVisible()"
+    [attr.aria-label]="emailVisible() ? 'Hide email' : 'Show email'"
+  >
+    @if (emailVisible()) {
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M9.88 9.88 4.12 4.12" />
+      <path d="M14.12 9.88 19.88 4.12" />
+      <path d="M9.88 14.12 4.12 19.88" />
+      <path d="M14.12 14.12 19.88 19.88" />
+    </svg>
+    } @else {
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+    }
+  </button>
+</ng-template>

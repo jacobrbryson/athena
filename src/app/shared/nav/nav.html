@@ -19,25 +19,17 @@
       @if (isLoggedIn()) {
       <div class="relative">
         <button
-          class="h-10 w-10 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition font-medium flex items-center justify-center"
+          class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition font-medium flex items-center justify-center border border-indigo-100 bg-white"
           type="button"
           (click)="toggleMenu()"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="lucide lucide-user"
-          >
-            <path d="M18 20a6 6 0 0 0-12 0" />
-            <circle cx="12" cy="10" r="4" />
-          </svg>
+          <app-avatar
+            [picture]="profile()?.picture"
+            [name]="profile()?.full_name || profile()?.email"
+            sizeClass="w-10 h-10"
+            bgClass="bg-indigo-50"
+            borderClass="border border-indigo-100"
+          />
         </button>
 
         @if (menuOpen()) {

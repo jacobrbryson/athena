@@ -1,22 +1,25 @@
-<div class="breadcrumb-shell">
-  <div class="breadcrumb-trail">
-    <div class="crumbs">
-      <ng-container *ngIf="showDashboardCrumb">
-        <ng-container *ngIf="disableDashboard; else dashboardLink">
-          <span class="breadcrumb-link readonly" [title]="dashboardTooltip">Dashboard</span>
+<div class="w-full">
+  <div
+    class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm"
+  >
+    <div class="flex items-center gap-2 text-sm">
+      <ng-container *ngFor="let crumb of crumbs(); let last = last">
+        <ng-container *ngIf="crumb.link; else crumbText">
+          <a [routerLink]="crumb.link" class="transition-colors hover:text-slate-700" [ngClass]="crumbClass(crumb)">
+            {{ crumb.text }}
+          </a>
         </ng-container>
-        <ng-template #dashboardLink>
-          <a class="breadcrumb-link" routerLink="/dashboard">Dashboard</a>
+        <ng-template #crumbText>
+          <span [ngClass]="crumbClass(crumb)">{{ crumb.text }}</span>
         </ng-template>
-        <span aria-hidden="true" class="crumb-separator">/</span>
+        <span *ngIf="!last" aria-hidden="true" class="text-slate-300">/</span>
       </ng-container>
-      <span class="breadcrumb-current">{{ label }}</span>
     </div>
-    <div class="breadcrumb-actions">
+    <div class="flex items-center justify-center min-w-[32px] min-h-[32px]">
       <a
         *ngIf="!isOnProfile"
         routerLink="/profile"
-        class="gear-button"
+        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-600 transition hover:bg-slate-200 hover:text-slate-800"
         aria-label="Go to profile settings"
         title="Settings"
       >

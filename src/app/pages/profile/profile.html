@@ -12,15 +12,18 @@
 
   <div class="grid gap-5 items-start lg:grid-cols-3">
     <div class="lg:col-span-2">
-  <ng-container *ngIf="profileComplete() && !editing(); else editFlow">
+  <ng-container *ngIf="!profileLocked(); else lockedProfile">
+    <ng-container *ngIf="profileComplete() && !editing(); else editFlow">
     <div class="summary-card">
       <div class="summary-header">
         <div>
           <p class="eyebrow">Profile</p>
           <h2>{{ profile()?.full_name || 'Name not set' }}</h2>
-          <p class="lede small">{{ profile()?.email || 'Email not set' }}</p>
+          <p class="lede small">
+            <app-masked-email [email]="profile()?.email || 'Email not set'"></app-masked-email>
+          </p>
         </div>
-        <button class="ghost" type="button" (click)="startEdit()">Edit profile</button>
+        <button class="ghost" type="button" (click)="startEdit()" [disabled]="profileLocked()">Edit profile</button>
       </div>
 
       <div class="row">
@@ -37,6 +40,8 @@
         </div>
       </div>
     </div>
+  </ng-container>
+
   </ng-container>
 
   <ng-template #editFlow>
@@ -168,6 +173,28 @@
           <p>We need your birthday to determine the right experience.</p>
           <button class="ghost" type="button" (click)="currentStep.set(1)">Back to birthday</button>
         </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #lockedProfile>
+    <div class="summary-card">
+      <div class="summary-header">
+        <div>
+          <p class="eyebrow">Profile locked</p>
+          <h2>{{ profile()?.full_name || profile()?.email || 'Profile' }}</h2>
+          <p class="lede small">A parent or guardian has disabled editing for this profile.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="label">Email</div>
+        <div class="value">
+          <app-masked-email [email]="profile()?.email || 'Email not set'"></app-masked-email>
+        </div>
+      </div>
+      <div class="row">
+        <div class="label">Birthday</div>
+        <div class="value">{{ profile()?.birthday || 'Birthday not set' }}</div>
       </div>
     </div>
   </ng-template>

@@ -1,0 +1,12 @@
+<div
+  class="avatar rounded-full overflow-hidden flex items-center justify-center font-semibold"
+  [ngClass]="[sizeClass, bgClass, borderClass]"
+  [attr.aria-label]="displayName || 'Avatar'"
+>
+  <ng-container *ngIf="pictureUrl && !imageFailed; else initial">
+    <img [src]="pictureUrl" [alt]="displayName || 'Avatar'" (error)="onImageError()" />
+  </ng-container>
+  <ng-template #initial>
+    <span class="avatar-initial">{{ initial }}</span>
+  </ng-template>
+</div>

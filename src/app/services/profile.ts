@@ -14,6 +14,7 @@ export interface Profile {
   has_guardian?: boolean;
   is_guardian?: boolean;
   is_teacher?: boolean;
+  profile_editing_locked?: boolean;
 }
 
 export interface BlockedChild {
@@ -39,6 +40,10 @@ export interface Guardian {
 export function normalizeProfileData(data: Profile | null): Profile | null {
   if (!data) return null;
   let birthday = data.birthday;
+  const profile_editing_locked =
+    typeof data.profile_editing_locked === 'boolean'
+      ? data.profile_editing_locked
+      : Boolean((data as any).profile_editing_locked);
 
   if (typeof birthday === 'string') {
     const parsed = new Date(birthday);
@@ -49,7 +54,7 @@ export function normalizeProfileData(data: Profile | null): Profile | null {
     }
   }
 
-  return { ...data, birthday };
+  return { ...data, birthday, profile_editing_locked };
 }
 
 @Injectable({

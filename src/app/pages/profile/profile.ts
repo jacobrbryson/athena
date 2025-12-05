@@ -4,13 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Profile as ProfileModel, ProfileService } from 'src/app/services/profile';
 import { Breadcrumb } from 'src/app/shared/breadcrumb/breadcrumb';
+import { MaskedEmail } from 'src/app/shared/masked-email/masked-email';
+import { formatDisplayTime } from 'src/app/shared/date-utils';
 
 declare const grecaptcha: any;
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule, Breadcrumb],
+  imports: [NgIf, NgFor, FormsModule, Breadcrumb, MaskedEmail],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
 })
@@ -26,6 +28,7 @@ export class Profile implements OnInit {
   blocklistAction = this.profileService.blocklistAction;
   guardians = this.profileService.guardians;
   guardiansLoading = this.profileService.guardiansLoading;
+  profileLocked = computed<boolean>(() => !!this.profile()?.profile_editing_locked);
 
   editing = signal<boolean>(true);
   currentStep = signal<0 | 1 | 2>(1); // 0 = viewing existing profile, 1 = basics, 2 = post-save follow-up
@@ -311,6 +314,7 @@ export class Profile implements OnInit {
   }
 
   startEdit() {
+    if (this.profileLocked()) return;
     this.editing.set(true);
     this.currentStep.set(1);
   }
@@ -333,6 +337,12 @@ export class Profile implements OnInit {
     const adultNeedsRole = age !== null && age >= 18 && !(p.is_guardian || p.is_teacher);
 
     this.prefillFromProfile();
+
+    if (this.profileLocked()) {
+      this.editing.set(false);
+      this.currentStep.set(0);
+      return;
+    }
 
     if (missingBirthday || under13NeedsGuardian || adultNeedsRole) {
       this.editing.set(true);
@@ -437,13 +447,7 @@ export class Profile implements OnInit {
   formatBlockedTimestamp(value?: string) {
     const date = this.parseBlockedDate(value);
     if (!date) return 'Unknown time';
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+    return formatDisplayTime(date);
   }
 
   formatBlockedRelative(value?: string) {

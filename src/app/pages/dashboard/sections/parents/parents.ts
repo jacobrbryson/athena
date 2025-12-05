@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ParentService } from 'src/app/services/parent';
 import { Child } from 'src/app/services/parent';
+import { formatDisplayTime } from 'src/app/shared/date-utils';
+import { Avatar } from 'src/app/shared/avatar/avatar';
 
 @Component({
   selector: 'app-parents',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule, Avatar],
   standalone: true,
   templateUrl: './parents.html',
   styleUrls: ['./parents.css'],
@@ -15,6 +17,7 @@ export class Parents implements OnInit {
   private parentService = inject(ParentService);
   private router = inject(Router);
   children = this.parentService.children;
+  parentLoading = this.parentService.loading;
   selectedChildId = signal<number | null>(null);
   showAddChildModal = signal(false);
   actionMenuOpen = signal(false);
@@ -26,25 +29,33 @@ export class Parents implements OnInit {
     email: '',
     birthday: '',
   });
-
-  auditTrail = signal([
+  moodSuggestionsOpen = signal(false);
+  moodSuggestions = signal([
     {
-      id: 1,
-      activity: "Athena provided feedback on Sophia's reading goals",
-      time: 'Today, 9:32 AM',
+      title: 'Celebrate consistency',
+      body: 'Point out 3 moments this week when they stayed on task and reward with a short break.',
     },
     {
-      id: 2,
-      activity: 'Parent adjusted Ethan\'s weekly focus to "Writing"',
-      time: 'Yesterday, 7:14 PM',
+      title: 'Lighten the load',
+      body: 'Swap a harder goal with a creative activity to rebuild confidence before retrying.',
     },
-    { id: 3, activity: 'Sophia completed a math challenge session', time: '2 days ago, 5:30 PM' },
+    {
+      title: 'Check-in prompt',
+      body: 'Ask “What felt easy today? What felt heavy?” and log it to track mood patterns.',
+    },
   ]);
+
+  auditTrail = signal<any[]>([]);
 
   selectChild(id: number | null) {
     this.selectedChildId.set(id);
     this.closeActionMenu();
     this.cancelPendingAction();
+    if (id == null) {
+      this.auditTrail.set([]);
+      return;
+    }
+    this.loadChildDetails(id);
   }
 
   onChildFieldChange(field: 'full_name' | 'email' | 'birthday', value: string) {
@@ -56,45 +67,11 @@ export class Parents implements OnInit {
   }
 
   ngOnInit() {
-    const fallbackChildren = [
-      {
-        id: 1,
-        name: 'Sophia',
-        full_name: 'Sophia',
-        status: 'active',
-        gradeLevel: 'Grade 4',
-        mood: 'Curious',
-        avgProgress: 82,
-        focus: ['Math', 'Reading Comprehension'],
-        targets: [
-          { id: 1, topic: 'Fractions & Decimals', progress: 90 },
-          { id: 2, topic: 'Reading Inference Skills', progress: 75 },
-        ],
-      },
-      {
-        id: 2,
-        name: 'Ethan',
-        full_name: 'Ethan',
-        status: 'active',
-        gradeLevel: 'Grade 2',
-        mood: 'Motivated',
-        avgProgress: 68,
-        focus: ['Writing', 'Social Studies'],
-        targets: [
-          { id: 3, topic: 'Creative Writing', progress: 70 },
-          { id: 4, topic: 'US Geography', progress: 60 },
-        ],
-      },
-    ];
-
-    this.children.set(fallbackChildren as any);
-
     this.parentService.fetchChildren().then((kids) => {
       if (kids.length) {
         this.selectChild(kids[0].id);
       } else {
-        this.children.set(fallbackChildren as any);
-        this.selectChild(fallbackChildren[0].id);
+        this.selectChild(null);
       }
     });
   }
@@ -208,4 +185,47 @@ export class Parents implements OnInit {
     if (!uuid) return;
     this.router.navigate(['/profile', uuid, 'options']);
   }
+
+  private childRouteUuid(child: Child | null) {
+    return (child as any)?.uuid || (child as any)?.child_uuid || (child as any)?.id;
+  }
+
+  goToLearningGoals() {
+    const uuid = this.childRouteUuid(this.selectedChild());
+    if (!uuid) return;
+    this.router.navigate(['/dashboard/profile', uuid, 'learning-goals']);
+  }
+
+  goToActivity() {
+    const uuid = this.childRouteUuid(this.selectedChild());
+    if (!uuid) return;
+    this.router.navigate(['/dashboard/profile', uuid, 'activity']);
+  }
+
+  openMoodSuggestions() {
+    this.moodSuggestionsOpen.set(true);
+  }
+
+  closeMoodSuggestions() {
+    this.moodSuggestionsOpen.set(false);
+  }
+
+  private async loadChildDetails(id: number) {
+    const child = this.selectedChild();
+    const identifier = this.childRouteUuid(child) ?? id;
+
+    const goals = await this.parentService.fetchChildGoals(identifier as any);
+    if (goals) {
+      this.children.update((list) =>
+        list.map((c) => (c.id === id ? ({ ...c, targets: goals } as any) : c))
+      );
+    }
+
+    const activity = await this.parentService.fetchChildActivity(identifier as any);
+    if (Array.isArray(activity)) {
+      this.auditTrail.set(activity);
+    }
+  }
+
+  formatActivityTime = formatDisplayTime;
 }

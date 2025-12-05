@@ -1,18 +1,24 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { ProfileService } from 'src/app/services/profile';
+import { Avatar } from '../avatar/avatar';
 
 @Component({
   selector: 'app-nav',
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, Avatar],
   templateUrl: './nav.html',
   styleUrl: './nav.css',
 })
 export class Nav {
+  private router = inject(Router);
+  private profileService = inject(ProfileService);
+
   isLoggedIn = signal<boolean>(false);
   menuOpen = signal<boolean>(false);
+  profile = this.profileService.profile;
 
-  constructor(private router: Router) {
+  constructor() {
     this.checkLoginStatus();
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
@@ -38,6 +44,12 @@ export class Nav {
   checkLoginStatus(): void {
     const tokenPresent = !!localStorage.getItem('auth_token');
     this.isLoggedIn.set(tokenPresent);
+    if (tokenPresent) {
+      // Ensure profile is hydrated so the nav avatar can show the user's picture/initial.
+      this.profileService.fetchProfile();
+    } else {
+      this.profile.set(null);
+    }
   }
 
   /**
@@ -46,6 +58,7 @@ export class Nav {
   logout(): void {
     localStorage.removeItem('auth_token');
     this.isLoggedIn.set(false);
+    this.profile.set(null);
     this.router.navigate(['/']);
     window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token' }));
     this.menuOpen.set(false);
