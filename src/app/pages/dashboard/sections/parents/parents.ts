@@ -1,14 +1,29 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import { ParentService } from 'src/app/services/parent';
 import { Child } from 'src/app/services/parent';
 import { formatDisplayTime } from 'src/app/shared/date-utils';
-import { Avatar } from 'src/app/shared/avatar/avatar';
+import { ParentActionConfirmModalComponent } from './parent-action-confirm-modal.component';
+import { ParentAddChildModalComponent } from './parent-add-child-modal.component';
+import { ParentChildDetailsComponent } from './parent-child-details.component';
+import { ParentChildListComponent } from './parent-child-list.component';
+import { ParentChildLoadingComponent } from './parent-child-loading.component';
+import { ParentEmptyStateComponent } from './parent-empty-state.component';
+import { ParentMoodSuggestionsComponent } from './parent-mood-suggestions.component';
 
 @Component({
   selector: 'app-parents',
-  imports: [CommonModule, RouterModule, Avatar],
+  imports: [
+    CommonModule,
+    ParentChildListComponent,
+    ParentChildLoadingComponent,
+    ParentChildDetailsComponent,
+    ParentEmptyStateComponent,
+    ParentAddChildModalComponent,
+    ParentActionConfirmModalComponent,
+    ParentMoodSuggestionsComponent,
+  ],
   standalone: true,
   templateUrl: './parents.html',
   styleUrls: ['./parents.css'],
@@ -214,14 +229,18 @@ export class Parents implements OnInit {
     const child = this.selectedChild();
     const identifier = this.childRouteUuid(child) ?? id;
 
-    const goals = await this.parentService.fetchChildGoals(identifier as any);
+    const goals = await this.parentService.fetchChildGoals(identifier as any, {
+      limit: 5,
+      activeOnly: true,
+      orderBy: 'progress_desc',
+    });
     if (goals) {
       this.children.update((list) =>
         list.map((c) => (c.id === id ? ({ ...c, targets: goals } as any) : c))
       );
     }
 
-    const activity = await this.parentService.fetchChildActivity(identifier as any);
+    const activity = await this.parentService.fetchChildActivity(identifier as any, { limit: 5 });
     if (Array.isArray(activity)) {
       this.auditTrail.set(activity);
     }

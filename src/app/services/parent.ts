@@ -23,7 +23,6 @@ export interface Child extends ChildPayload {
   denied_at?: string | null;
   status?: 'pending' | 'approved' | 'denied' | 'active';
   profile_editing_locked?: boolean;
-  // UI extras (optional when returned from API)
   name?: string;
   gradeLevel?: string;
   mood?: string;
@@ -43,6 +42,8 @@ export interface ChildGoal {
   progress: number;
   status?: string;
   created_by?: 'parent' | 'child' | 'teacher' | string | null;
+  created_by_profile_id?: number | null;
+  created_by_email?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -53,6 +54,8 @@ export interface PaginatedGoals {
   page: number;
   pageSize: number;
 }
+
+type Decision = 'approve' | 'deny';
 
 @Injectable({
   providedIn: 'root',
@@ -65,21 +68,230 @@ export class ParentService {
   loading = signal(false);
   saving = signal(false);
 
+  // --- Public API: Children -------------------------------------------------
+
+  async fetchChildren(): Promise<Child[]> {
+    if (this.loading()) return this.children();
+    this.loading.set(true);
+    try {
+      const result = await this.apiGet<Child[]>('/children');
+      const normalized = (result || []).map((c) => this.applyStatus(c)).filter((c) => c.status !== 'denied');
+      this.children.set(normalized);
+      return normalized;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async addChild(payload: ChildPayload): Promise<Child | null> {
+    return this.withSaving(async () => {
+      const created = await this.apiPost<Child>('/children', payload);
+      const normalized = this.applyStatus(created);
+      const updated = [...this.children(), normalized].filter((c) => c.status !== 'denied');
+      this.children.set(updated);
+      return normalized;
+    });
+  }
+
+  async updateChild(childId: number | string, payload: ChildPayload): Promise<Child | null> {
+    const result = await this.withSaving(async () => {
+      const updatedChild = await this.apiPut<Child>(`/children/${childId}`, payload);
+      const normalized = this.applyStatus(updatedChild);
+      const next = this.children()
+        .map((c) => (this.matchesChild(childId, c) ? { ...c, ...normalized } : c))
+        .filter((c) => c.status !== 'denied');
+      this.children.set(next);
+      return normalized;
+    });
+    return result;
+  }
+
+  async deleteChild(childId: number | string): Promise<boolean> {
+    const result = await this.withSaving(async () => {
+      await this.apiDelete<void>(`/children/${childId}`);
+      this.children.set(this.children().filter((c) => !this.matchesChild(childId, c)));
+      return true;
+    });
+    return result ?? false;
+  }
+
+  approveChild(childId: number): Promise<Child | null> {
+    return this.handleDecision(childId, 'approve');
+  }
+
+  denyChild(childId: number): Promise<Child | null> {
+    return this.handleDecision(childId, 'deny');
+  }
+
+  async blockChild(childId: number): Promise<boolean> {
+    const result = await this.withSaving(async () => {
+      await this.apiPost(`/children/${childId}/block`, {});
+      this.children.set(this.children().filter((c) => c.id !== childId));
+      return true;
+    });
+    return result ?? false;
+  }
+
+  // --- Public API: Goals ----------------------------------------------------
+
+  async fetchChildGoals(
+    childId: number | string,
+    options: { limit?: number; activeOnly?: boolean; orderBy?: 'progress_desc' | 'created_at' } = {}
+  ): Promise<{ id: number; topic: string; progress: number }[]> {
+    if (!childId) return [];
+    const params: Record<string, any> = {};
+    if (options.limit) params['limit'] = options.limit;
+    if (options.activeOnly !== undefined) params['active_only'] = options.activeOnly;
+    if (options.orderBy) params['order_by'] = options.orderBy;
+
+    const goals = await this.apiGet<{ id: number; topic: string; progress: number }[]>(
+      `/children/${childId}/goals`,
+      params
+    );
+    this.children.set(
+      this.children().map((c) => (this.matchesChild(childId, c) ? { ...c, targets: goals } : c))
+    );
+    return goals || [];
+  }
+
+  async fetchChildGoalsPaginated(
+    childId: number | string,
+    page: number,
+    pageSize: number,
+    opts: { includeDeleted?: boolean; activeOnly?: boolean } = {}
+  ): Promise<PaginatedGoals> {
+    if (!childId) return { items: [], total: 0, page: 1, pageSize };
+
+    const safePage = Number.isFinite(page) && page > 0 ? page : 1;
+    const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? pageSize : 10;
+    const includeDeleted = opts.includeDeleted === true;
+    const activeOnly = opts.activeOnly !== false;
+
+    const params: Record<string, any> = {
+      page: safePage,
+      page_size: safePageSize,
+      include_deleted: includeDeleted,
+      active_only: activeOnly,
+    };
+
+    const goals = await this.apiGet<PaginatedGoals | ChildGoal[]>(`/children/${childId}/goals`, params);
+    if (Array.isArray(goals)) {
+      return { items: goals, total: goals.length, page: 1, pageSize: goals.length || safePageSize };
+    }
+
+    return {
+      items: goals.items || [],
+      total: goals.total ?? 0,
+      page: goals.page ?? safePage,
+      pageSize: goals.pageSize ?? safePageSize,
+    };
+  }
+
+  async addChildGoal(childId: number | string, topic: string): Promise<ChildGoal | null> {
+    if (!childId || !topic?.trim()) return null;
+    return this.apiPost<ChildGoal>(`/children/${childId}/goals`, { topic: topic.trim() });
+  }
+
+  async deleteChildGoal(
+    childId: number | string,
+    goalId: number | string,
+    opts: { markComplete?: boolean } = {}
+  ): Promise<boolean> {
+    if (!childId || !goalId) return false;
+    await this.apiDelete<void>(`/children/${childId}/goals/${goalId}`, opts.markComplete ? { mark_complete: 'true' } : {});
+    return true;
+  }
+
+  async fetchChildActivity(
+    childId: number | string,
+    options: { limit?: number } = {}
+  ): Promise<{ id: number; activity: string; time: string }[]> {
+    if (!childId) return [];
+    const params: Record<string, any> = {};
+    if (options.limit) params['limit'] = options.limit;
+    return this.apiGet<{ id: number; activity: string; time: string }[]>(
+      `/children/${childId}/activity`,
+      params
+    ).catch(() => []);
+  }
+
+  // --- Internal helpers -----------------------------------------------------
+
+  private endpoint(path: string): string {
+    return `${environment.proxyServer}/api/v1/parent${path}`;
+  }
+
+  private async apiGet<T>(path: string, params?: Record<string, any>): Promise<T> {
+    try {
+      return await firstValueFrom(this.http.get<T>(this.endpoint(path), { params }));
+    } catch (err) {
+      this.handleHttpError(err, `GET ${path}`);
+      throw err;
+    }
+  }
+
+  private async apiPost<T>(path: string, body: any): Promise<T> {
+    try {
+      return await firstValueFrom(this.http.post<T>(this.endpoint(path), body));
+    } catch (err) {
+      this.handleHttpError(err, `POST ${path}`);
+      throw err;
+    }
+  }
+
+  private async apiPut<T>(path: string, body: any): Promise<T> {
+    try {
+      return await firstValueFrom(this.http.put<T>(this.endpoint(path), body));
+    } catch (err) {
+      this.handleHttpError(err, `PUT ${path}`);
+      throw err;
+    }
+  }
+
+  private async apiDelete<T>(path: string, params?: Record<string, any>): Promise<T> {
+    try {
+      return await firstValueFrom(this.http.delete<T>(this.endpoint(path), { params }));
+    } catch (err) {
+      this.handleHttpError(err, `DELETE ${path}`);
+      throw err;
+    }
+  }
+
+  private async handleDecision(childId: number, action: Decision): Promise<Child | null> {
+    return this.withSaving(async () => {
+      const updated = await this.apiPost<Child>(`/children/${childId}/${action}`, {});
+      const normalized = this.applyStatus(updated);
+      this.children.set(this.children().map((c) => (c.id === childId ? { ...c, ...normalized } : c)));
+      return normalized;
+    });
+  }
+
+  private async withSaving<T>(fn: () => Promise<T>): Promise<T | null> {
+    if (this.saving()) return null;
+    this.saving.set(true);
+    try {
+      return await fn();
+    } catch {
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   private applyStatus(child: Child): Child {
     const uuid = child.uuid || (child as any).child_uuid || child.google_id;
     const status: Child['status'] =
       child.denied_at ? 'denied' : child.approved_at ? 'approved' : child.invited_at ? 'pending' : 'active';
-    return {
-      ...child,
-      uuid,
-      child_uuid: uuid,
-      status,
-    };
+    return { ...child, uuid, child_uuid: uuid, status };
+  }
+
+  private matchesChild(target: string | number, child: Child): boolean {
+    const uuid = child.uuid || (child as any).child_uuid;
+    return child.id === target || uuid === target || `${child.id}` === `${target}`;
   }
 
   private handleHttpError(err: any, context: string): void {
     console.error(`ParentService: Error during ${context}:`, err);
-
     if (err instanceof HttpErrorResponse) {
       const apiMessage = err.error?.message;
       if (apiMessage) {
@@ -95,249 +307,6 @@ export class ParentService {
         `An unexpected client error occurred: ${err.message || 'Unknown'}`,
         'error'
       );
-    }
-  }
-
-  private matchesChild(target: string | number, child: Child): boolean {
-    const uuid = child.uuid || (child as any).child_uuid;
-    return child.id === target || uuid === target || `${child.id}` === `${target}`;
-  }
-
-  async fetchChildren(): Promise<Child[]> {
-    if (this.loading()) return this.children();
-    this.loading.set(true);
-    try {
-      const result = await firstValueFrom(
-        this.http.get<Child[]>(`${environment.proxyServer}/api/v1/parent/children`)
-      );
-      const normalized = (result || []).map((c) => this.applyStatus(c)).filter((c) => c.status !== 'denied');
-      this.children.set(normalized);
-      return normalized;
-    } catch (err) {
-      this.handleHttpError(err, 'fetch children');
-      return this.children();
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  async addChild(payload: ChildPayload): Promise<Child | null> {
-    if (this.saving()) return null;
-    this.saving.set(true);
-    try {
-      const created = await firstValueFrom(
-        this.http.post<Child>(`${environment.proxyServer}/api/v1/parent/children`, payload)
-      );
-      const normalized = this.applyStatus(created);
-      const updated = [...this.children(), normalized].filter((c) => c.status !== 'denied');
-      this.children.set(updated);
-      return normalized;
-    } catch (err) {
-      this.handleHttpError(err, 'add child');
-      return null;
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  async updateChild(childId: number | string, payload: ChildPayload): Promise<Child | null> {
-    if (this.saving()) return null;
-    this.saving.set(true);
-    try {
-      const updatedChild = await firstValueFrom(
-        this.http.put<Child>(
-          `${environment.proxyServer}/api/v1/parent/children/${childId}`,
-          payload
-        )
-      );
-      const normalized = this.applyStatus(updatedChild);
-      const next = this.children()
-        .map((c) => (this.matchesChild(childId, c) ? { ...c, ...normalized } : c))
-        .filter((c) => c.status !== 'denied');
-      this.children.set(next);
-      return normalized;
-    } catch (err) {
-      this.handleHttpError(err, 'update child');
-      return null;
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  async deleteChild(childId: number | string): Promise<boolean> {
-    if (this.saving()) return false;
-    this.saving.set(true);
-    try {
-      await firstValueFrom(
-        this.http.delete(`${environment.proxyServer}/api/v1/parent/children/${childId}`)
-      );
-      this.children.set(this.children().filter((c) => !this.matchesChild(childId, c)));
-      return true;
-    } catch (err) {
-      this.handleHttpError(err, 'delete child');
-      return false;
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  private async handleDecision(
-    childId: number,
-    action: 'approve' | 'deny'
-  ): Promise<Child | null> {
-    if (this.saving()) return null;
-    this.saving.set(true);
-    try {
-      const updated = await firstValueFrom(
-        this.http.post<Child>(
-          `${environment.proxyServer}/api/v1/parent/children/${childId}/${action}`,
-          {}
-        )
-      );
-      const normalized = this.applyStatus(updated);
-      this.children.set(
-        this.children().map((c) => (c.id === childId ? { ...c, ...normalized } : c))
-      );
-      return normalized;
-    } catch (err) {
-      this.handleHttpError(err, `${action} child invite`);
-      return null;
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  approveChild(childId: number): Promise<Child | null> {
-    return this.handleDecision(childId, 'approve');
-  }
-
-  denyChild(childId: number): Promise<Child | null> {
-    return this.handleDecision(childId, 'deny');
-  }
-
-  async blockChild(childId: number): Promise<boolean> {
-    if (this.saving()) return false;
-    this.saving.set(true);
-    try {
-      await firstValueFrom(
-        this.http.post(`${environment.proxyServer}/api/v1/parent/children/${childId}/block`, {})
-      );
-      this.children.set(this.children().filter((c) => c.id !== childId));
-      return true;
-    } catch (err) {
-      this.handleHttpError(err, 'block child');
-      return false;
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  async fetchChildGoals(
-    childId: number | string
-  ): Promise<{ id: number; topic: string; progress: number }[]> {
-    if (!childId) return [];
-    try {
-      const goals = await firstValueFrom(
-        this.http.get<{ id: number; topic: string; progress: number }[]>(
-          `${environment.proxyServer}/api/v1/parent/children/${childId}/goals`
-        )
-      );
-      // Attach to child in cache for quick reuse
-      this.children.set(
-        this.children().map((c) => (this.matchesChild(childId, c) ? { ...c, targets: goals } : c))
-      );
-      return goals || [];
-    } catch (err) {
-      this.handleHttpError(err, 'fetch child goals');
-      return [];
-    }
-  }
-
-  async fetchChildGoalsPaginated(
-    childId: number | string,
-    page: number,
-    pageSize: number,
-    opts: { includeDeleted?: boolean; activeOnly?: boolean } = {}
-  ): Promise<PaginatedGoals> {
-    if (!childId) return { items: [], total: 0, page: 1, pageSize };
-    const safePage = Number.isFinite(page) && page > 0 ? page : 1;
-    const safePageSize = Number.isFinite(pageSize) && pageSize > 0 ? pageSize : 10;
-    const includeDeleted = opts.includeDeleted === true;
-    const activeOnly = opts.activeOnly !== false; // default true
-
-    try {
-      const goals = await firstValueFrom(
-        this.http.get<PaginatedGoals | ChildGoal[]>(
-          `${environment.proxyServer}/api/v1/parent/children/${childId}/goals`,
-          {
-            params: {
-              page: safePage,
-              page_size: safePageSize,
-              include_deleted: includeDeleted,
-              active_only: activeOnly,
-            } as any,
-          }
-        )
-      );
-
-      if (Array.isArray(goals)) {
-        return { items: goals, total: goals.length, page: 1, pageSize: goals.length || safePageSize };
-      }
-
-      return {
-        items: goals.items || [],
-        total: goals.total ?? 0,
-        page: goals.page ?? safePage,
-        pageSize: goals.pageSize ?? safePageSize,
-      };
-    } catch (err) {
-      this.handleHttpError(err, 'fetch child goals (paginated)');
-      return { items: [], total: 0, page: safePage, pageSize: safePageSize };
-    }
-  }
-
-  async addChildGoal(childId: number | string, topic: string): Promise<ChildGoal | null> {
-    if (!childId || !topic?.trim()) return null;
-    try {
-      const goal = await firstValueFrom(
-        this.http.post<ChildGoal>(`${environment.proxyServer}/api/v1/parent/children/${childId}/goals`, {
-          topic: topic.trim(),
-        })
-      );
-      return goal;
-    } catch (err) {
-      this.handleHttpError(err, 'add child goal');
-      return null;
-    }
-  }
-
-  async deleteChildGoal(childId: number | string, goalId: number | string): Promise<boolean> {
-    if (!childId || !goalId) return false;
-    try {
-      await firstValueFrom(
-        this.http.delete(`${environment.proxyServer}/api/v1/parent/children/${childId}/goals/${goalId}`)
-      );
-      return true;
-    } catch (err) {
-      this.handleHttpError(err, 'delete child goal');
-      return false;
-    }
-  }
-
-  async fetchChildActivity(
-    childId: number | string
-  ): Promise<{ id: number; activity: string; time: string }[]> {
-    if (!childId) return [];
-    try {
-      const activity = await firstValueFrom(
-        this.http.get<{ id: number; activity: string; time: string }[]>(
-          `${environment.proxyServer}/api/v1/parent/children/${childId}/activity`
-        )
-      );
-      return activity || [];
-    } catch (err) {
-      this.handleHttpError(err, 'fetch child activity');
-      return [];
     }
   }
 }
