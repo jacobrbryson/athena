@@ -7,6 +7,7 @@ import { ToastService } from 'src/app/services/toast';
 import { Breadcrumb } from 'src/app/shared/breadcrumb/breadcrumb';
 import { ConfirmDialog } from 'src/app/shared/confirm-dialog/confirm-dialog';
 import { MaskedEmail } from 'src/app/shared/masked-email/masked-email';
+import { GRADE_OPTIONS, formatGrade, GradeValue } from 'src/app/shared/constants/grades';
 
 @Component({
   selector: 'app-profile-options',
@@ -31,8 +32,10 @@ export class ProfileOptions implements OnInit {
     full_name: '',
     email: '',
     birthday: '',
+    grade: '' as GradeValue | '',
     profile_editing_locked: false,
   });
+  gradeOptions = GRADE_OPTIONS;
 
   breadcrumbTrail = computed(() => [
     { text: 'Profile', muted: true },
@@ -78,6 +81,7 @@ export class ProfileOptions implements OnInit {
       full_name: child.full_name || (child as any).name || '',
       email: child.email || '',
       birthday,
+      grade: ((child as any).grade as GradeValue) || '',
       profile_editing_locked: !!child.profile_editing_locked,
     });
   }
@@ -111,6 +115,10 @@ export class ProfileOptions implements OnInit {
 
   updateField(field: 'full_name' | 'email' | 'birthday', value: string) {
     this.form.update((f) => ({ ...f, [field]: value }));
+  }
+
+  updateGrade(value: GradeValue | '') {
+    this.form.update((f) => ({ ...f, grade: value || '' }));
   }
 
   toggleProfileLock(checked: boolean) {
@@ -160,5 +168,13 @@ export class ProfileOptions implements OnInit {
       this.deleting.set(false);
       this.showDeleteConfirm.set(false);
     }
+  }
+
+  gradeLabel(): string {
+    return formatGrade(
+      this.form().grade ||
+        (this.child() as any)?.grade ||
+        ''
+    );
   }
 }

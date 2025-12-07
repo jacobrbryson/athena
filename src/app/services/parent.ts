@@ -3,11 +3,13 @@ import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { ToastService } from './toast';
+import { formatGrade } from 'src/app/shared/constants/grades';
 
 export interface ChildPayload {
   full_name: string;
   email: string;
   birthday: string;
+  grade?: string;
   profile_editing_locked?: boolean;
 }
 
@@ -23,8 +25,8 @@ export interface Child extends ChildPayload {
   denied_at?: string | null;
   status?: 'pending' | 'approved' | 'denied' | 'active';
   profile_editing_locked?: boolean;
+  grade?: string;
   name?: string;
-  gradeLevel?: string;
   mood?: string;
   avgProgress?: number;
   level?: number;
@@ -290,6 +292,7 @@ export class ParentService {
 
   private applyStatus(child: Child): Child {
     const uuid = child.uuid || (child as any).child_uuid || child.google_id;
+    const grade = this.normalizeGrade((child as any).grade);
     const status: Child['status'] = child.denied_at
       ? 'denied'
       : child.approved_at
@@ -297,12 +300,24 @@ export class ParentService {
       : child.invited_at
       ? 'pending'
       : 'active';
-    return { ...child, uuid, child_uuid: uuid, status };
+    return {
+      ...child,
+      uuid,
+      child_uuid: uuid,
+      grade,
+      status,
+    };
   }
 
   private matchesChild(target: string | number, child: Child): boolean {
     const uuid = child.uuid || (child as any).child_uuid;
     return child.id === target || uuid === target || `${child.id}` === `${target}`;
+  }
+
+  private normalizeGrade(value?: string | null): string {
+    if (typeof value !== 'string') return '';
+    const normalized = value.trim().toLowerCase();
+    return normalized;
   }
 
   private handleHttpError(err: any, context: string): void {

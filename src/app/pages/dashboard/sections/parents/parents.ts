@@ -11,6 +11,7 @@ import { ParentChildListComponent } from './parent-child-list.component';
 import { ParentChildLoadingComponent } from './parent-child-loading.component';
 import { ParentEmptyStateComponent } from './parent-empty-state.component';
 import { ParentMoodSuggestionsComponent } from './parent-mood-suggestions.component';
+import { GradeValue } from 'src/app/shared/constants/grades';
 
 @Component({
   selector: 'app-parents',
@@ -39,10 +40,18 @@ export class Parents implements OnInit {
   pendingAction = signal<{ type: 'approve' | 'deny' | 'block'; childName: string } | null>(
     null
   );
-  newChild = signal<{ full_name: string; email: string; birthday: string }>({
+  newChild = signal<{
+    full_name: string;
+    email: string;
+    birthday: string;
+    grade: GradeValue | '';
+    profile_editing_locked: boolean;
+  }>({
     full_name: '',
     email: '',
     birthday: '',
+    grade: '',
+    profile_editing_locked: true,
   });
   moodSuggestionsOpen = signal(false);
   moodSuggestions = signal([
@@ -77,8 +86,11 @@ export class Parents implements OnInit {
     this.loadChildDetails(id);
   }
 
-  onChildFieldChange(field: 'full_name' | 'email' | 'birthday', value: string) {
-    this.newChild.update((child) => ({ ...child, [field]: value }));
+  onChildFieldChange(
+    field: 'full_name' | 'email' | 'birthday' | 'grade' | 'profile_editing_locked',
+    value: string | boolean | GradeValue
+  ) {
+    this.newChild.update((child) => ({ ...child, [field]: value as any }));
   }
 
   selectedChild() {
@@ -96,7 +108,13 @@ export class Parents implements OnInit {
   }
 
   openAddChildModal() {
-    this.newChild.set({ full_name: '', email: '', birthday: '' });
+    this.newChild.set({
+      full_name: '',
+      email: '',
+      birthday: '',
+      grade: '',
+      profile_editing_locked: true,
+    });
     this.showAddChildModal.set(true);
   }
 
@@ -105,7 +123,7 @@ export class Parents implements OnInit {
   }
 
   async saveChild() {
-    const payload = { ...this.newChild() };
+    const payload = { ...this.newChild(), grade: this.newChild().grade || undefined };
     const created = await this.parentService.addChild(payload);
 
     if (created) {
@@ -121,10 +139,11 @@ export class Parents implements OnInit {
           full_name: payload.full_name || 'New Child',
           email: payload.email,
           birthday: payload.birthday,
-          gradeLevel: '',
+          grade: payload.grade || '',
           mood: '',
           avgProgress: 0,
           focus: [],
+          profile_editing_locked: payload.profile_editing_locked,
           targets: [],
         } as any,
       ]);

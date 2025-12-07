@@ -6,6 +6,7 @@ import { Profile as ProfileModel, ProfileService } from 'src/app/services/profil
 import { Breadcrumb } from 'src/app/shared/breadcrumb/breadcrumb';
 import { MaskedEmail } from 'src/app/shared/masked-email/masked-email';
 import { formatDisplayTime } from 'src/app/shared/date-utils';
+import { GRADE_OPTIONS, formatGrade, GradeValue } from 'src/app/shared/constants/grades';
 
 declare const grecaptcha: any;
 
@@ -36,10 +37,12 @@ export class Profile implements OnInit {
     full_name: '',
     email: '',
     birthday: '',
+    grade: '' as GradeValue | '',
     has_guardian: false,
     is_guardian: false,
     is_teacher: false,
   });
+  gradeOptions = GRADE_OPTIONS;
 
   // Fallback computed for when data is pending.
   profileSummary = computed(() => {
@@ -130,12 +133,17 @@ export class Profile implements OnInit {
     this.form.update((f) => ({ ...f, birthday: value }));
   }
 
+  updateGrade(value: GradeValue | '') {
+    this.form.update((f) => ({ ...f, grade: value || '' }));
+  }
+
   async saveAndAdvance() {
     const data = this.form();
     const saved = await this.profileService.saveProfile({
       full_name: data.full_name || this.profile()?.full_name,
       email: data.email,
       birthday: data.birthday,
+      grade: data.grade,
       has_guardian: data.has_guardian,
       is_guardian: data.is_guardian,
       is_teacher: data.is_teacher,
@@ -301,6 +309,7 @@ export class Profile implements OnInit {
       full_name: data.full_name || this.profile()?.full_name,
       email: data.email,
       birthday: data.birthday,
+      grade: data.grade,
       has_guardian: data.has_guardian,
       is_guardian: data.is_guardian,
       is_teacher: data.is_teacher,
@@ -386,6 +395,7 @@ export class Profile implements OnInit {
       full_name: p.full_name || (p as any).name || f.full_name,
       email: p.email || f.email,
       birthday: p.birthday || f.birthday,
+      grade: (p as any).grade || f.grade,
       has_guardian: p.has_guardian ?? f.has_guardian,
       is_guardian: p.is_guardian ?? f.is_guardian,
       is_teacher: p.is_teacher ?? f.is_teacher,
@@ -479,5 +489,9 @@ export class Profile implements OnInit {
       day: 'numeric',
     });
     return dateFormatter.format(date);
+  }
+
+  gradeLabel(): string {
+    return formatGrade(this.form().grade || this.profile()?.grade || '');
   }
 }

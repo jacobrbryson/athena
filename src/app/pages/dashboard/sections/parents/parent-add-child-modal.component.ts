@@ -1,7 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { GRADE_OPTIONS, GradeValue } from 'src/app/shared/constants/grades';
 
-type EditableChild = { full_name: string; email: string; birthday: string };
+type EditableChild = {
+	full_name: string;
+	email: string;
+	birthday: string;
+	grade: GradeValue | '';
+	profile_editing_locked: boolean;
+};
 
 @Component({
   selector: 'app-parent-add-child-modal',
@@ -72,6 +79,52 @@ type EditableChild = { full_name: string; email: string; birthday: string };
               Child must be between 5 and 18 years old.
             </p>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Grade (optional)</label>
+            <select
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              [value]="child.grade || ''"
+              (change)="handleChange('grade', $any($event.target).value)"
+            >
+              <option value="">Select a grade</option>
+              <option *ngFor="let option of gradeOptions" [value]="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+            <p class="mt-1 text-xs text-gray-500">We use grade to personalize learning goals.</p>
+          </div>
+          <div class="flex items-start justify-between rounded-lg border border-gray-200 p-3 bg-gray-50">
+            <div class="mr-3">
+              <p class="text-sm font-medium text-gray-800 flex items-center gap-2">
+                Lock profile editing by child
+                <span
+                  class="text-gray-400 cursor-help"
+                  title="Prevents changing name, birthday, or grade from the child's account."
+                  aria-label="Lock profile help"
+                >
+                  &#9432;
+                </span>
+              </p>
+              <p class="text-xs text-gray-500">
+                Enabled by default to keep details consistent. You can change this later.
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                class="sr-only peer"
+                [checked]="child.profile_editing_locked"
+                (change)="handleChange('profile_editing_locked', $any($event.target).checked)"
+              />
+              <div
+                class="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-teal-600 transition"
+              >
+                <div
+                  class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transform transition peer-checked:translate-x-4"
+                ></div>
+              </div>
+            </label>
+          </div>
         </div>
         <div class="mt-6 flex justify-end space-x-3">
           <button
@@ -92,16 +145,27 @@ type EditableChild = { full_name: string; email: string; birthday: string };
             Save
           </button>
         </div>
-      </div>
+  </div>
     </div>
   `,
 })
 export class ParentAddChildModalComponent {
-  @Input() child: EditableChild = { full_name: '', email: '', birthday: '' };
+  @Input() child: EditableChild = {
+	full_name: '',
+	email: '',
+	birthday: '',
+	grade: '',
+	profile_editing_locked: true,
+  };
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();
-  @Output() fieldChange = new EventEmitter<{ field: keyof EditableChild; value: string }>();
+  @Output() fieldChange = new EventEmitter<{
+	field: keyof EditableChild;
+	value: string | boolean;
+  }>();
+
+  gradeOptions = GRADE_OPTIONS;
 
   get isNameValid(): boolean {
     const name = (this.child.full_name || '').trim();
@@ -130,7 +194,11 @@ export class ParentAddChildModalComponent {
     return this.shiftYears(-5);
   }
 
-  handleChange(field: keyof EditableChild, value: string) {
+  handleChange(field: keyof EditableChild, value: string | boolean) {
+    if (field === 'grade' && typeof value === 'string') {
+      this.fieldChange.emit({ field, value: (value as GradeValue) || '' });
+      return;
+    }
     this.fieldChange.emit({ field, value });
   }
 

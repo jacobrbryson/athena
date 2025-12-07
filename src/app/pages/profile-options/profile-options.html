@@ -50,6 +50,12 @@
               </div>
             </div>
             <div class="row">
+              <div class="label">Grade</div>
+              <div class="value">
+                {{ gradeLabel() || 'Not set' }}
+              </div>
+            </div>
+            <div class="row">
               <div class="label">Profile lock</div>
               <div class="value chip-row">
                 <div class="pill">
@@ -89,6 +95,18 @@
                 [ngModel]="form().birthday"
                 (ngModelChange)="updateField('birthday', $event)"
               />
+            </div>
+            <div class="field">
+              <label>Grade (optional)</label>
+              <select
+                [ngModel]="form().grade"
+                (ngModelChange)="updateGrade($event)"
+              >
+                <option value="">Select a grade</option>
+                <option *ngFor="let option of gradeOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
             </div>
 
             <div class="toggle-field">
@@ -156,6 +174,12 @@
               <div class="label">Birthday</div>
               <div class="value">
                 {{ childBirthday() ? (childBirthday() | date : 'MMMM d, y') : 'Not set' }}
+              </div>
+            </div>
+            <div class="row slim">
+              <div class="label">Grade</div>
+              <div class="value">
+                {{ gradeLabel() || 'Not set' }}
               </div>
             </div>
             <div class="row slim">

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Child } from 'src/app/services/parent';
 import { Avatar } from 'src/app/shared/avatar/avatar';
+import { formatGrade } from 'src/app/shared/constants/grades';
 
 @Component({
   selector: 'app-parent-child-list',
@@ -102,7 +103,9 @@ import { Avatar } from 'src/app/shared/avatar/avatar';
               <p class="font-semibold text-teal-800 flex items-center gap-2">
                 {{ child.full_name || child.name }}
               </p>
-              <p class="text-sm text-gray-500">{{ child.gradeLevel }}</p>
+              <p class="text-sm text-gray-500">
+                {{ gradeLabel(child) || 'Grade not set' }}
+              </p>
             </div>
           </div>
           <span
@@ -135,5 +138,9 @@ export class ParentChildListComponent {
 
   onAddChild() {
     this.addChild.emit();
+  }
+
+  gradeLabel(child: Child): string {
+    return formatGrade((child as any).grade || '');
   }
 }

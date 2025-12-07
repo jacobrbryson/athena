@@ -11,6 +11,7 @@ export interface Profile {
   full_name?: string;
   picture?: string;
   birthday?: string;
+  grade?: string;
   has_guardian?: boolean;
   is_guardian?: boolean;
   is_teacher?: boolean;
@@ -40,6 +41,7 @@ export interface Guardian {
 export function normalizeProfileData(data: Profile | null): Profile | null {
   if (!data) return null;
   let birthday = data.birthday;
+  let grade = data.grade;
   const profile_editing_locked =
     typeof data.profile_editing_locked === 'boolean'
       ? data.profile_editing_locked
@@ -54,7 +56,11 @@ export function normalizeProfileData(data: Profile | null): Profile | null {
     }
   }
 
-  return { ...data, birthday, profile_editing_locked };
+  if (typeof grade === 'string') {
+    grade = grade.trim().toLowerCase();
+  }
+
+  return { ...data, birthday, grade, profile_editing_locked };
 }
 
 @Injectable({
