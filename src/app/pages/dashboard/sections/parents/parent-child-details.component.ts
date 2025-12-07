@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { Avatar } from 'src/app/shared/avatar/avatar';
+import { AnimatedProgressBarComponent } from 'src/app/shared/animated-progress-bar/animated-progress-bar';
+import { AnimatedCounterComponent } from 'src/app/shared/animated-counter/animated-counter';
 import { Child } from 'src/app/services/parent';
 
 @Component({
   selector: 'app-parent-child-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, Avatar],
+  imports: [CommonModule, RouterModule, Avatar, AnimatedProgressBarComponent, AnimatedCounterComponent],
   template: `
     @if (child; as child) {
     <div>
@@ -183,21 +185,27 @@ import { Child } from 'src/app/services/parent';
           <div
             class="inline-flex items-center px-3 py-1 rounded-full bg-white text-teal-700 border border-teal-200 font-semibold"
           >
-            {{ levelValue(child) }}
+            <app-animated-counter [value]="levelValue(child)" [duration]="700"></app-animated-counter>
           </div>
-          <div class="mt-3 w-full bg-teal-100 h-2 rounded-full">
-            <div
-              class="h-2 rounded-full bg-teal-500"
-              [style.width.%]="levelProgressValue(child)"
-            ></div>
+          <div class="mt-3">
+            <app-animated-progress-bar
+              class="w-full"
+              [value]="levelProgressValue(child)"
+              [duration]="900"
+              [height]="8"
+              [style.--apb-track]="'#ccfbf1'"
+              [style.--apb-fill]="'linear-gradient(90deg, #0d9488 0%, #14b8a6 100%)'"
+            ></app-animated-progress-bar>
           </div>
           <p class="text-xs text-gray-500 mt-2">Progress to next level</p>
         </div>
         <div class="p-4 bg-teal-50 rounded-xl text-center">
           <p class="text-sm text-gray-500">Wisdom Points</p>
-          <p class="text-2xl font-bold text-teal-700">
-            {{ wisdomPointsValue(child) | number : '1.0-0' }}
-          </p>
+          <app-animated-counter
+            class="text-2xl font-bold text-teal-700"
+            [value]="wisdomPointsValue(child)"
+            [duration]="900"
+          ></app-animated-counter>
           <div
             class="mt-3 flex items-center justify-center gap-3 text-sm font-medium text-teal-700"
           >
@@ -359,7 +367,11 @@ import { Child } from 'src/app/services/parent';
         </button>
       </div>
       <div class="space-y-3">
-        @if ((child.targets || []).length === 0) {
+        @if (child.targets === undefined || child.targets === null) {
+        <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm animate-pulse">
+          Loading goals…
+        </div>
+        } @else if ((child.targets || []).length === 0) {
         <div class="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm">
           No learning goals yet. Add a goal to guide this learner.
         </div>
@@ -369,15 +381,15 @@ import { Child } from 'src/app/services/parent';
         >
           <p class="font-medium text-gray-800">{{ goal.topic }}</p>
           <div class="w-full md:w-1/3 flex items-center mt-2 md:mt-0">
-            <div class="w-full bg-gray-200 h-2 rounded-full mr-2">
-              <div
-                class="h-2 rounded-full bg-teal-500"
-                [style.width.%]="goalProgressValue(goal)"
-              ></div>
-            </div>
-            <span class="text-sm text-gray-600">
-              {{ goalProgressValue(goal) }}%
-            </span>
+            <app-animated-progress-bar
+              class="w-full"
+              [value]="goalProgressValue(goal)"
+              [duration]="900"
+              [height]="8"
+              [showValue]="true"
+              [style.--apb-track]="'#e2e8f0'"
+              [style.--apb-fill]="'linear-gradient(90deg, #14b8a6 0%, #2dd4bf 100%)'"
+            ></app-animated-progress-bar>
           </div>
         </div>
         } }
@@ -429,7 +441,11 @@ import { Child } from 'src/app/services/parent';
           View All
         </button>
       </div>
-      @if (!(auditTrail || []).length) {
+      @if (auditTrailLoading || auditTrail === null || auditTrail === undefined) {
+      <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm animate-pulse">
+        Loading activity…
+      </div>
+      } @else if (!(auditTrail || []).length) {
       <div class="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm">
         Activity will appear here once this learner starts engaging.
       </div>
@@ -449,7 +465,8 @@ import { Child } from 'src/app/services/parent';
 })
 export class ParentChildDetailsComponent {
   @Input() child: Child | null = null;
-  @Input() auditTrail: any[] = [];
+  @Input() auditTrail: any[] | null = null;
+  @Input() auditTrailLoading = false;
   @Input() actionMenuOpen = false;
   @Input() formatActivityTime: (value: any) => string = (value: any) => value;
 

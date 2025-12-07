@@ -1,0 +1,45 @@
+.apb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.apb-inline {
+  min-width: 6rem;
+}
+
+.apb-label {
+  font-size: 0.875rem;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.apb-track {
+  --apb-track: #e5e7eb;
+  background: var(--apb-track);
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.apb-fill {
+  --apb-fill: linear-gradient(90deg, #14b8a6 0%, #0ea5e9 100%);
+  background: var(--apb-fill);
+  height: 100%;
+  transform-origin: left;
+  box-shadow: 0 6px 12px rgba(20, 184, 166, 0.25);
+}
+
+.apb-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  min-width: 3ch;
+  text-align: right;
+}
+
+.apb-square {
+  border-radius: 6px;
+}
+

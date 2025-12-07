@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { Avatar } from 'src/app/shared/avatar/avatar';
 import { Child } from 'src/app/services/parent';
+import { Avatar } from 'src/app/shared/avatar/avatar';
 
 @Component({
   selector: 'app-parent-child-list',
@@ -53,7 +53,7 @@ import { Child } from 'src/app/services/parent';
         </button>
       </div>
 
-      <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
+      <div class="space-y-2 max-h-96 overflow-y-auto">
         @if (loading) {
         <div class="space-y-3">
           @for (_ of [1, 2, 3]; track _) {

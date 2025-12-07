@@ -60,7 +60,8 @@ export class Parents implements OnInit {
     },
   ]);
 
-  auditTrail = signal<any[]>([]);
+  auditTrail = signal<any[] | null>(null);
+  auditTrailLoading = signal(false);
 
   selectChild(id: number | null) {
     this.selectedChildId.set(id);
@@ -68,8 +69,11 @@ export class Parents implements OnInit {
     this.cancelPendingAction();
     if (id == null) {
       this.auditTrail.set([]);
+      this.auditTrailLoading.set(false);
       return;
     }
+    this.auditTrailLoading.set(true);
+    this.auditTrail.set(null);
     this.loadChildDetails(id);
   }
 
@@ -229,20 +233,29 @@ export class Parents implements OnInit {
     const child = this.selectedChild();
     const identifier = this.childRouteUuid(child) ?? id;
 
-    const goals = await this.parentService.fetchChildGoals(identifier as any, {
-      limit: 5,
-      activeOnly: true,
-      orderBy: 'progress_desc',
-    });
-    if (goals) {
-      this.children.update((list) =>
-        list.map((c) => (c.id === id ? ({ ...c, targets: goals } as any) : c))
-      );
-    }
+    try {
+      const goals = await this.parentService.fetchChildGoals(identifier as any, {
+        limit: 5,
+        activeOnly: true,
+        orderBy: 'progress_desc',
+      });
+      if (goals) {
+        this.children.update((list) =>
+          list.map((c) => (c.id === id ? ({ ...c, targets: goals } as any) : c))
+        );
+      }
 
-    const activity = await this.parentService.fetchChildActivity(identifier as any, { limit: 5 });
-    if (Array.isArray(activity)) {
-      this.auditTrail.set(activity);
+      const activity = await this.parentService.fetchChildActivity(identifier as any, { limit: 5 });
+      if (Array.isArray(activity)) {
+        this.auditTrail.set(activity);
+      } else {
+        this.auditTrail.set([]);
+      }
+    } catch (err) {
+      this.auditTrail.set([]);
+      throw err;
+    } finally {
+      this.auditTrailLoading.set(false);
     }
   }
 

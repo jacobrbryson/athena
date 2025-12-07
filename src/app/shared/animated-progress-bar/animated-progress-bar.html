@@ -1,0 +1,24 @@
+<div class="apb" [class.apb-inline]="showValue">
+  @if (label) {
+  <span class="apb-label">{{ label }}</span>
+  }
+  <div
+    class="apb-track"
+    [class.rounded-full]="rounded"
+    [class.apb-square]="!rounded"
+    [ngClass]="trackClass"
+    [style.height.px]="height"
+  >
+    <div
+      class="apb-fill"
+      [class.rounded-full]="rounded"
+      [class.apb-square]="!rounded"
+      [ngClass]="fillClass"
+      [style.width.%]="animatedValue()"
+    ></div>
+  </div>
+  @if (showValue) {
+  <span class="apb-value">{{ animatedValue() | number : '1.0-0' }}%</span>
+  }
+</div>
+
