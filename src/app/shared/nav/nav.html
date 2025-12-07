@@ -24,8 +24,8 @@
           (click)="toggleMenu()"
         >
           <app-avatar
-            [picture]="profile()?.picture"
-            [name]="profile()?.full_name || profile()?.email"
+            [picture]="profile()?.picture ?? ''"
+            [full_name]="profile()?.full_name ?? profile()?.email ?? ''"
             sizeClass="w-10 h-10"
             bgClass="bg-indigo-50"
             borderClass="border border-indigo-100"

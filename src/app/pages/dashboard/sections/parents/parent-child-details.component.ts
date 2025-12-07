@@ -1,23 +1,29 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { Avatar } from 'src/app/shared/avatar/avatar';
-import { AnimatedProgressBarComponent } from 'src/app/shared/animated-progress-bar/animated-progress-bar';
-import { AnimatedCounterComponent } from 'src/app/shared/animated-counter/animated-counter';
 import { Child } from 'src/app/services/parent';
+import { AnimatedCounterComponent } from 'src/app/shared/animated-counter/animated-counter';
+import { AnimatedProgressBarComponent } from 'src/app/shared/animated-progress-bar/animated-progress-bar';
+import { Avatar } from 'src/app/shared/avatar/avatar';
 
 @Component({
   selector: 'app-parent-child-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, Avatar, AnimatedProgressBarComponent, AnimatedCounterComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    Avatar,
+    AnimatedProgressBarComponent,
+    AnimatedCounterComponent,
+  ],
   template: `
     @if (child; as child) {
     <div>
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-2xl font-bold text-teal-700 flex items-center">
           <app-avatar
-            [picture]="child.picture"
-            [name]="child.full_name || child.name"
+            [picture]="child.picture ?? null"
+            [full_name]="child.full_name"
             sizeClass="w-9 h-9"
             class="mr-3 flex-shrink-0"
           />
@@ -27,7 +33,6 @@ import { Child } from 'src/app/services/parent';
         <button
           class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 flex items-center gap-2"
           (click)="viewProfile.emit()"
-          title="View Profile"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -185,7 +190,10 @@ import { Child } from 'src/app/services/parent';
           <div
             class="inline-flex items-center px-3 py-1 rounded-full bg-white text-teal-700 border border-teal-200 font-semibold"
           >
-            <app-animated-counter [value]="levelValue(child)" [duration]="700"></app-animated-counter>
+            <app-animated-counter
+              [value]="levelValue(child)"
+              [duration]="700"
+            ></app-animated-counter>
           </div>
           <div class="mt-3">
             <app-animated-progress-bar
@@ -214,6 +222,7 @@ import { Child } from 'src/app/services/parent';
               class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-1.5"
               routerLink="/about"
               fragment="wisdom_points"
+              title="Learn more"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -236,8 +245,10 @@ import { Child } from 'src/app/services/parent';
             <span class="text-gray-300">|</span>
             <button
               type="button"
-              class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-1.5"
+              class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
               routerLink="/dashboard/store"
+              [disabled]="true"
+              title="Coming Soon"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -270,6 +281,7 @@ import { Child } from 'src/app/services/parent';
               class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-1.5"
               routerLink="/about"
               fragment="mood_indicator"
+              title="Learn more"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -292,8 +304,10 @@ import { Child } from 'src/app/services/parent';
             <span class="text-gray-300">|</span>
             <button
               type="button"
-              class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-1.5"
+              class="px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
               (click)="moodSuggestionsRequested.emit()"
+              [disabled]="true"
+              title="Coming Soon"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -368,7 +382,9 @@ import { Child } from 'src/app/services/parent';
       </div>
       <div class="space-y-3">
         @if (child.targets === undefined || child.targets === null) {
-        <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm animate-pulse">
+        <div
+          class="p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm animate-pulse"
+        >
           Loading goals…
         </div>
         } @else if ((child.targets || []).length === 0) {
@@ -442,7 +458,9 @@ import { Child } from 'src/app/services/parent';
         </button>
       </div>
       @if (auditTrailLoading || auditTrail === null || auditTrail === undefined) {
-      <div class="p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm animate-pulse">
+      <div
+        class="p-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 text-sm animate-pulse"
+      >
         Loading activity…
       </div>
       } @else if (!(auditTrail || []).length) {

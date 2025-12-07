@@ -9,8 +9,8 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
   styleUrls: ['./avatar.css'],
 })
 export class Avatar implements OnChanges {
-  @Input() picture?: any;
-  @Input() name?: any;
+  @Input() picture: string | null = '';
+  @Input() full_name: string | Record<string, any> | null = '';
   @Input() sizeClass = 'w-9 h-9';
   @Input() bgClass = 'bg-teal-200';
   @Input() borderClass = 'border border-teal-100';
@@ -23,41 +23,42 @@ export class Avatar implements OnChanges {
     }
   }
 
-  get initial(): string {
-    const source = this.displayName;
-    const first = typeof source === 'string' ? source.trim().charAt(0) : '';
-    return first ? first.toUpperCase() : '?';
+  get initialLetter(): string | null {
+    const label = this.nameLabel;
+    const first = label ? label.charAt(0) : '';
+    return first ? first.toUpperCase() : null;
   }
 
-  get displayName(): string {
-    if (typeof this.name === 'string') {
-      const text = this.name.trim();
-      return text === '[object Object]' ? '' : text;
+  get nameLabel(): string {
+    const value = this.full_name as any;
+    if (typeof value === 'string') {
+      return value.trim();
     }
-    if (this.name && typeof this.name === 'object') {
-      const candidate = this.name.full_name || this.name.fullName || this.name.name;
-      if (typeof candidate === 'string') {
-        const text = candidate.trim();
-        if (text && text !== '[object Object]') return text;
+
+    if (value && typeof value === 'object') {
+      const maybeName =
+        value.full_name ||
+        value.fullName ||
+        value.name ||
+        value.display_name ||
+        value.displayName;
+
+      if (typeof maybeName === 'string') {
+        return maybeName.trim();
       }
-      const maybeToString = typeof this.name.toString === 'function' ? this.name.toString() : '';
-      if (typeof maybeToString === 'string') {
-        const text = maybeToString.trim();
-        if (text && text !== '[object Object]') return text;
-      }
+
+      const first = typeof value.first_name === 'string' ? value.first_name.trim() : '';
+      const last = typeof value.last_name === 'string' ? value.last_name.trim() : '';
+      const combined = `${first} ${last}`.trim();
+      if (combined) return combined;
     }
+
     return '';
   }
 
   get pictureUrl(): string | null {
     if (typeof this.picture === 'string' && this.picture.trim().length) {
       return this.picture;
-    }
-    if (this.picture && typeof this.picture === 'object') {
-      const candidate = this.picture.url || this.picture.src || this.picture.href || this.picture.data;
-      if (typeof candidate === 'string' && candidate.trim().length) {
-        return candidate;
-      }
     }
     return null;
   }

@@ -31,7 +31,6 @@ import { Avatar } from 'src/app/shared/avatar/avatar';
         </h3>
         <button
           type="button"
-          title="Add Child"
           (click)="onAddChild()"
           class="ml-3 px-3 py-2 text-sm font-medium text-teal-700 rounded-lg hover:bg-teal-50 inline-flex items-center gap-2 shadow-sm border border-teal-200"
         >
@@ -94,8 +93,8 @@ import { Avatar } from 'src/app/shared/avatar/avatar';
         >
           <div class="flex-1 flex items-center gap-3">
             <app-avatar
-              [picture]="child.picture"
-              [name]="child.full_name || child.name"
+              [picture]="child.picture ?? ''"
+              [full_name]="child.full_name"
               sizeClass="w-9 h-9"
               class="flex-shrink-0"
             />

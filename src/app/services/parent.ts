@@ -5,9 +5,9 @@ import { environment } from 'src/environments/environment';
 import { ToastService } from './toast';
 
 export interface ChildPayload {
-  full_name?: string;
-  email?: string;
-  birthday?: string;
+  full_name: string;
+  email: string;
+  birthday: string;
   profile_editing_locked?: boolean;
 }
 
@@ -75,7 +75,9 @@ export class ParentService {
     this.loading.set(true);
     try {
       const result = await this.apiGet<Child[]>('/children');
-      const normalized = (result || []).map((c) => this.applyStatus(c)).filter((c) => c.status !== 'denied');
+      const normalized = (result || [])
+        .map((c) => this.applyStatus(c))
+        .filter((c) => c.status !== 'denied');
       this.children.set(normalized);
       return normalized;
     } finally {
@@ -174,7 +176,10 @@ export class ParentService {
       active_only: activeOnly,
     };
 
-    const goals = await this.apiGet<PaginatedGoals | ChildGoal[]>(`/children/${childId}/goals`, params);
+    const goals = await this.apiGet<PaginatedGoals | ChildGoal[]>(
+      `/children/${childId}/goals`,
+      params
+    );
     if (Array.isArray(goals)) {
       return { items: goals, total: goals.length, page: 1, pageSize: goals.length || safePageSize };
     }
@@ -198,7 +203,10 @@ export class ParentService {
     opts: { markComplete?: boolean } = {}
   ): Promise<boolean> {
     if (!childId || !goalId) return false;
-    await this.apiDelete<void>(`/children/${childId}/goals/${goalId}`, opts.markComplete ? { mark_complete: 'true' } : {});
+    await this.apiDelete<void>(
+      `/children/${childId}/goals/${goalId}`,
+      opts.markComplete ? { mark_complete: 'true' } : {}
+    );
     return true;
   }
 
@@ -261,7 +269,9 @@ export class ParentService {
     return this.withSaving(async () => {
       const updated = await this.apiPost<Child>(`/children/${childId}/${action}`, {});
       const normalized = this.applyStatus(updated);
-      this.children.set(this.children().map((c) => (c.id === childId ? { ...c, ...normalized } : c)));
+      this.children.set(
+        this.children().map((c) => (c.id === childId ? { ...c, ...normalized } : c))
+      );
       return normalized;
     });
   }
@@ -280,8 +290,13 @@ export class ParentService {
 
   private applyStatus(child: Child): Child {
     const uuid = child.uuid || (child as any).child_uuid || child.google_id;
-    const status: Child['status'] =
-      child.denied_at ? 'denied' : child.approved_at ? 'approved' : child.invited_at ? 'pending' : 'active';
+    const status: Child['status'] = child.denied_at
+      ? 'denied'
+      : child.approved_at
+      ? 'approved'
+      : child.invited_at
+      ? 'pending'
+      : 'active';
     return { ...child, uuid, child_uuid: uuid, status };
   }
 

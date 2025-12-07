@@ -43,6 +43,7 @@ type EditableChild = { full_name: string; email: string; birthday: string };
               [value]="child.full_name"
               (input)="handleChange('full_name', $any($event.target).value)"
               placeholder="e.g., Alex Johnson"
+              maxlength="255"
             />
           </div>
           <div>
@@ -53,7 +54,9 @@ type EditableChild = { full_name: string; email: string; birthday: string };
               [value]="child.email"
               (input)="handleChange('email', $any($event.target).value)"
               placeholder="child@example.com"
+              maxlength="255"
             />
+            <p class="mt-1 text-xs text-gray-500">Email must be a valid Google account.</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Birthday</label>
@@ -62,7 +65,12 @@ type EditableChild = { full_name: string; email: string; birthday: string };
               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
               [value]="child.birthday"
               (input)="handleChange('birthday', $any($event.target).value)"
+              [attr.min]="birthdayMin"
+              [attr.max]="birthdayMax"
             />
+            <p class="mt-1 text-xs text-gray-500">
+              Child must be between 5 and 18 years old.
+            </p>
           </div>
         </div>
         <div class="mt-6 flex justify-end space-x-3">
@@ -76,7 +84,10 @@ type EditableChild = { full_name: string; email: string; birthday: string };
           <button
             type="button"
             class="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
-            (click)="save.emit()"
+            [disabled]="!isFormValid"
+            [class.opacity-60]="!isFormValid"
+            [class.cursor-not-allowed]="!isFormValid"
+            (click)="handleSave()"
           >
             Save
           </button>
@@ -92,7 +103,46 @@ export class ParentAddChildModalComponent {
   @Output() save = new EventEmitter<void>();
   @Output() fieldChange = new EventEmitter<{ field: keyof EditableChild; value: string }>();
 
+  get isNameValid(): boolean {
+    const name = (this.child.full_name || '').trim();
+    return !!name && name.length <= 255;
+  }
+
+  get isEmailValid(): boolean {
+    const email = (this.child.email || '').trim();
+    if (!email || email.length > 255) return false;
+    // Basic email validation pattern; keeps client-side check lightweight.
+    const pattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    return pattern.test(email);
+  }
+
+  get isFormValid(): boolean {
+    return this.isNameValid && this.isEmailValid;
+  }
+
+  get birthdayMin(): string {
+    // Oldest allowed: up to 18 years ago.
+    return this.shiftYears(-18);
+  }
+
+  get birthdayMax(): string {
+    // Youngest allowed: at least 5 years ago.
+    return this.shiftYears(-5);
+  }
+
   handleChange(field: keyof EditableChild, value: string) {
     this.fieldChange.emit({ field, value });
+  }
+
+  handleSave() {
+    if (!this.isFormValid) return;
+    this.save.emit();
+  }
+
+  private shiftYears(deltaYears: number): string {
+    const now = new Date();
+    const shifted = new Date(now);
+    shifted.setFullYear(now.getFullYear() + deltaYears);
+    return shifted.toISOString().split('T')[0];
   }
 }

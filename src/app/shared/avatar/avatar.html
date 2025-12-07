@@ -1,12 +1,22 @@
 <div
   class="avatar rounded-full overflow-hidden flex items-center justify-center font-semibold"
   [ngClass]="[sizeClass, bgClass, borderClass]"
-  [attr.aria-label]="displayName || 'Avatar'"
+  [attr.aria-label]="nameLabel || 'Avatar'"
 >
-  <ng-container *ngIf="pictureUrl && !imageFailed; else initial">
-    <img [src]="pictureUrl" [alt]="displayName || 'Avatar'" (error)="onImageError()" />
+  <ng-container *ngIf="pictureUrl && !imageFailed; else initialTpl">
+    <img [src]="pictureUrl" [alt]="nameLabel || 'Avatar'" (error)="onImageError()" />
   </ng-container>
-  <ng-template #initial>
-    <span class="avatar-initial">{{ initial }}</span>
+  <ng-template #initialTpl>
+    <ng-container *ngIf="initialLetter; else userIcon">
+      <span class="avatar-initial">{{ initialLetter }}</span>
+    </ng-container>
+    <ng-template #userIcon>
+      <span class="avatar-initial avatar-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+          <path d="M6 20a6 6 0 0 1 12 0" />
+        </svg>
+      </span>
+    </ng-template>
   </ng-template>
 </div>
