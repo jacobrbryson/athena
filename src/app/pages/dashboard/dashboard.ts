@@ -34,10 +34,16 @@ export class Dashboard implements OnInit {
 		let profile = this.profileService.profile();
 
 		if (!profile) {
-		 profile = await this.profileService.fetchProfile();
+			profile = await this.profileService.fetchProfile();
 		}
 
-		if (!profile || !profile.birthday) {
+		// If the profile could not be loaded, avoid redirect loops and stay put.
+		if (!profile) {
+			this.loading.set(false);
+			return;
+		}
+
+		if (!profile.birthday) {
 			this.redirectToProfile();
 			return;
 		}

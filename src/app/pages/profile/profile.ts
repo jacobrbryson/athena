@@ -55,6 +55,8 @@ export class Profile implements OnInit {
   blocklistAction = this.profileService.blocklistAction;
   guardians = this.profileService.guardians;
   guardiansLoading = this.profileService.guardiansLoading;
+  childrenForGuardian = this.parentService.children;
+  childrenForGuardianLoading = this.parentService.loading;
   profileLocked = computed<boolean>(() => !!this.profile()?.profile_editing_locked);
   viewMode = signal<'self' | 'child'>('self');
 
@@ -180,6 +182,7 @@ export class Profile implements OnInit {
       this.syncFromProfile();
       this.profileService.fetchBlocklist();
       this.profileService.fetchGuardians();
+      this.parentService.fetchChildren();
       return;
     }
 
@@ -757,6 +760,20 @@ export class Profile implements OnInit {
   guardianCreatedText(guardian: GuardianSummary): string {
     const fallbackDate = guardian.approved_at || guardian.invited_at || guardian.created_at;
     return this.formatBlockedRelative(fallbackDate);
+  }
+
+  childListName(child: Child): string {
+    return child.full_name || (child as any).name || 'Child';
+  }
+
+  childGradeDisplay(child: Child): string {
+    return formatGrade((child as any).grade || child.grade || '');
+  }
+
+  childStatusDisplay(child: Child): string {
+    if (child.status === 'pending') return 'Pending approval';
+    if (child.status === 'approved') return 'Approved';
+    return 'Active';
   }
 
   siblingProgressValue(sibling: SiblingSummary): number {

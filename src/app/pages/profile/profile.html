@@ -276,7 +276,10 @@
 
     <ng-template #childLoadingState>
       <div class="card">
-        <p class="hint">Loading child options...</p>
+        <div class="skeleton-title"></div>
+        <div class="skeleton-line short mt-3"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
       </div>
     </ng-template>
 
@@ -554,6 +557,48 @@
     >
       <div class="blocklist-header">
         <div>
+          <p class="eyebrow">My children</p>
+          <p class="hint">Children linked to your guardian account.</p>
+        </div>
+      </div>
+      <ng-container *ngIf="childrenForGuardianLoading(); else childrenList">
+        <div class="blocklist-list">
+          <div class="blocked-row">
+            <div class="blocked-meta w-full">
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+            </div>
+          </div>
+          <div class="blocked-row">
+            <div class="blocked-meta w-full">
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+      <ng-template #childrenList>
+        <div *ngIf="childrenForGuardian().length; else emptyChildren" class="blocklist-list">
+          <div class="blocked-row" *ngFor="let child of childrenForGuardian()">
+            <div class="blocked-meta">
+              <p class="blocked-name">{{ childListName(child) }}</p>
+              <p class="blocked-email">{{ childGradeDisplay(child) || 'Grade not set' }}</p>
+              <p class="blocked-date">
+                {{ childStatusDisplay(child) }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <ng-template #emptyChildren>
+          <div class="empty">
+            <p class="blocked-name">No children linked</p>
+            <p class="hint">Children you add will show up here.</p>
+          </div>
+        </ng-template>
+      </ng-template>
+      <hr class="mt-3" />
+      <div class="blocklist-header">
+        <div>
           <p class="eyebrow">Blocked requests</p>
           <p class="hint">Children you blocked will not be able to request access again.</p>
         </div>
@@ -595,9 +640,6 @@
         <ng-template #emptyBlocklist>
           <div class="empty">
             <p class="blocked-name">No blocked requests</p>
-            <p class="hint">
-              When you block a request, it will appear here with an option to undo.
-            </p>
           </div>
         </ng-template>
       </ng-template>

@@ -24,10 +24,5 @@ export const ProfileGuard: CanActivateFn = async (): Promise<boolean | UrlTree> 
     return router.createUrlTree(['/profile']);
   }
 
-  const uuid = profile.uuid || (profile as any).google_id;
-  if (uuid) {
-    return router.createUrlTree(['/dashboard/profile', uuid]);
-  }
-
   return true;
 };
