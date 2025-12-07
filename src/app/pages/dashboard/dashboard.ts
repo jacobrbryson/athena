@@ -93,6 +93,12 @@ export class Dashboard implements OnInit {
 	}
 
 	private redirectToProfile() {
+		const profile = this.profileService.profile();
+		const uuid = profile?.uuid || (profile as any)?.google_id;
+		if (uuid) {
+			this.router.navigate(['/dashboard/profile', uuid]);
+			return;
+		}
 		this.router.navigate(['/profile']);
 	}
 

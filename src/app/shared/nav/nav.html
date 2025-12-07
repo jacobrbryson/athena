@@ -19,6 +19,7 @@
       @if (isLoggedIn()) {
       <div class="relative">
         <button
+          #menuButton
           class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition font-medium flex items-center justify-center border border-indigo-100 bg-white"
           type="button"
           (click)="toggleMenu()"
@@ -34,12 +35,13 @@
 
         @if (menuOpen()) {
         <div
+          #menuPanel
           class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-20"
         >
-          <a
-            routerLink="/dashboard"
-            class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 space-x-2"
-            (click)="closeMenu()"
+        <a
+          routerLink="/dashboard"
+          class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 space-x-2"
+          (click)="closeMenu()"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -60,6 +62,29 @@
             </svg>
             <span>Dashboard</span>
           </a>
+          <a
+            [routerLink]="profileLink()"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 space-x-2"
+            (click)="goToProfile($event)"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-user-round"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M6 20a6 6 0 0 1 12 0" />
+            </svg>
+            <span>Profile</span>
+          </a>
+          <hr />
           <button
             class="flex items-center w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 space-x-2"
             (click)="logout()"

@@ -221,7 +221,7 @@ export class Parents implements OnInit {
     const child = this.selectedChild();
     const uuid = (child as any)?.uuid || (child as any)?.child_uuid || (child as any)?.id;
     if (!uuid) return;
-    this.router.navigate(['/profile', uuid, 'options']);
+    this.router.navigate(['/dashboard/profile', uuid]);
   }
 
   private childRouteUuid(child: Child | null) {

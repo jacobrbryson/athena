@@ -1,25 +1,51 @@
-import { NgFor, NgIf } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgFor, NgIf, CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Profile as ProfileModel, ProfileService } from 'src/app/services/profile';
+import {
+  ParentService,
+  Child,
+  GuardianSummary,
+  SiblingSummary,
+} from 'src/app/services/parent';
+import { ToastService } from 'src/app/services/toast';
 import { Breadcrumb } from 'src/app/shared/breadcrumb/breadcrumb';
 import { MaskedEmail } from 'src/app/shared/masked-email/masked-email';
+import { AnimatedProgressBarComponent } from 'src/app/shared/animated-progress-bar/animated-progress-bar';
+import { Avatar } from 'src/app/shared/avatar/avatar';
+import { Subscription } from 'rxjs';
 import { formatDisplayTime } from 'src/app/shared/date-utils';
 import { GRADE_OPTIONS, formatGrade, GradeValue } from 'src/app/shared/constants/grades';
+import { ConfirmDialog } from 'src/app/shared/confirm-dialog/confirm-dialog';
 
 declare const grecaptcha: any;
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule, Breadcrumb, MaskedEmail],
+  imports: [
+    CommonModule,
+    NgIf,
+    NgFor,
+    FormsModule,
+    Breadcrumb,
+    MaskedEmail,
+    ConfirmDialog,
+    AnimatedProgressBarComponent,
+    Avatar,
+  ],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
 })
 export class Profile implements OnInit {
   profileService = inject(ProfileService);
+  private parentService = inject(ParentService);
+  private toastService = inject(ToastService);
+  private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private targetUuid = '';
+  private routeSub: Subscription | null = null;
 
   profile = this.profileService.profile;
   loading = this.profileService.loading;
@@ -30,6 +56,7 @@ export class Profile implements OnInit {
   guardians = this.profileService.guardians;
   guardiansLoading = this.profileService.guardiansLoading;
   profileLocked = computed<boolean>(() => !!this.profile()?.profile_editing_locked);
+  viewMode = signal<'self' | 'child'>('self');
 
   editing = signal<boolean>(true);
   currentStep = signal<0 | 1 | 2>(1); // 0 = viewing existing profile, 1 = basics, 2 = post-save follow-up
@@ -41,14 +68,36 @@ export class Profile implements OnInit {
     has_guardian: false,
     is_guardian: false,
     is_teacher: false,
+    profile_editing_locked: false,
   });
   gradeOptions = GRADE_OPTIONS;
+  child = signal<Child | null>(null);
+  childLoading = signal<boolean>(true);
+  childSaving = signal<boolean>(false);
+  childDeleting = signal<boolean>(false);
+  childEditMode = signal<boolean>(false);
+  showDeleteConfirm = signal<boolean>(false);
+  childForm = signal({
+    full_name: '',
+    email: '',
+    birthday: '',
+    grade: '' as GradeValue | '',
+    profile_editing_locked: false,
+  });
+  childGuardians = signal<GuardianSummary[]>([]);
+  childGuardiansLoading = signal<boolean>(false);
+  childSiblings = signal<SiblingSummary[]>([]);
+  childSiblingsLoading = signal<boolean>(false);
+  childBreadcrumbTrail = computed(() => [
+    { text: 'Profile', muted: true },
+    { text: this.childName() || 'Child', bold: true },
+  ]);
 
   // Fallback computed for when data is pending.
   profileSummary = computed(() => {
     const current = this.profile();
     if (this.loading()) return 'Loading your profile...';
-    if (!this.hasProfile()) return '⚠️ Profile setup is not complete.';
+    if (!this.hasProfile()) return 'Profile setup is not complete.';
     return current?.full_name || current?.email || 'Profile loaded';
   });
 
@@ -88,7 +137,11 @@ export class Profile implements OnInit {
   private static readonly RECAPTCHA_SITE_KEY = '6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5';
 
   refresh() {
-    this.profileService.fetchProfile().then((p) => {
+    if (this.viewMode() === 'child') {
+      this.loadChildProfile();
+      return;
+    }
+    this.profileService.fetchProfile().then(() => {
       this.syncFromProfile();
     });
     this.profileService.fetchBlocklist();
@@ -96,14 +149,42 @@ export class Profile implements OnInit {
 
   ngOnInit(): void {
     this.prefillFromToken();
-    // Always fetch latest profile, then hydrate the form/state.
-    this.profileService
-      .fetchProfile()
-      .then(() => {
-        this.syncFromProfile();
-        this.profileService.fetchBlocklist();
-        this.profileService.fetchGuardians();
-      });
+    this.routeSub = this.route.paramMap.subscribe((params) => {
+      this.targetUuid = params.get('uuid') ?? '';
+      this.initializeView();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
+  }
+
+  private async initializeView() {
+    this.child.set(null);
+    this.childGuardians.set([]);
+    this.childSiblings.set([]);
+    this.childLoading.set(true);
+
+    await this.profileService.fetchProfile();
+    this.prefillFromProfile();
+
+    const myUuid = this.profile()?.uuid || (this.profile() as any)?.google_id || '';
+    const isSelfRoute = !this.targetUuid || (myUuid && this.targetUuid === myUuid);
+
+    if (isSelfRoute) {
+      this.viewMode.set('self');
+      if (myUuid && this.targetUuid !== myUuid) {
+        this.router.navigate(['/dashboard/profile', myUuid], { replaceUrl: true });
+        return;
+      }
+      this.syncFromProfile();
+      this.profileService.fetchBlocklist();
+      this.profileService.fetchGuardians();
+      return;
+    }
+
+    this.viewMode.set('child');
+    await this.loadChildProfile();
   }
 
   nextStep() {
@@ -363,6 +444,170 @@ export class Profile implements OnInit {
     this.currentStep.set(0);
   }
 
+  private async loadChildProfile() {
+    this.childLoading.set(true);
+    try {
+      const children = await this.parentService.fetchChildren();
+      const match = this.findChild(children);
+      if (!match) {
+        this.child.set(null);
+        this.childGuardians.set([]);
+        this.childSiblings.set([]);
+        this.toastService.show('Child not found for this account.', 'error');
+        return;
+      }
+      this.child.set(match);
+      this.prefillChildForm(match);
+      const identifier = this.childIdentifier(match);
+      if (identifier !== undefined && identifier !== null) {
+        await Promise.all([
+          this.loadChildGuardians(identifier),
+          this.loadChildSiblings(identifier),
+        ]);
+      } else {
+        this.childGuardians.set([]);
+        this.childSiblings.set([]);
+      }
+    } finally {
+      this.childLoading.set(false);
+    }
+  }
+
+  private findChild(children: Child[]): Child | null {
+    return (
+      children.find(
+        (c: Child) =>
+          c.uuid === this.targetUuid ||
+          (c as any).child_uuid === this.targetUuid ||
+          c.google_id === this.targetUuid ||
+          `${c.id}` === this.targetUuid
+      ) || null
+    );
+  }
+
+  private childIdentifier(childOverride?: Child | null): string | number | undefined {
+    const c = childOverride || this.child();
+    if (!c) return undefined;
+    return (
+      this.targetUuid ||
+      c.uuid ||
+      (c as any).child_uuid ||
+      (c as any).google_id ||
+      c.id
+    );
+  }
+
+  private async loadChildGuardians(childId: number | string) {
+    this.childGuardiansLoading.set(true);
+    try {
+      const guardians = await this.parentService.fetchChildGuardians(childId);
+      this.childGuardians.set(guardians);
+    } finally {
+      this.childGuardiansLoading.set(false);
+    }
+  }
+
+  private async loadChildSiblings(childId: number | string) {
+    this.childSiblingsLoading.set(true);
+    try {
+      const siblings = await this.parentService.fetchChildSiblings(childId);
+      this.childSiblings.set(siblings);
+    } finally {
+      this.childSiblingsLoading.set(false);
+    }
+  }
+
+  startChildEdit() {
+    if (!this.child()) return;
+    this.childEditMode.set(true);
+  }
+
+  cancelChildEdit() {
+    const c = this.child();
+    if (c) this.prefillChildForm(c);
+    this.childEditMode.set(false);
+  }
+
+  updateChildField(field: 'full_name' | 'email' | 'birthday', value: string) {
+    this.childForm.update((f) => ({ ...f, [field]: value }));
+  }
+
+  updateChildGrade(value: GradeValue | '') {
+    this.childForm.update((f) => ({ ...f, grade: value || '' }));
+  }
+
+  toggleChildProfileLock(checked: boolean) {
+    this.childForm.update((f) => ({ ...f, profile_editing_locked: checked }));
+  }
+
+  async saveChildChanges() {
+    const child = this.child();
+    if (!child) return;
+    this.childSaving.set(true);
+    const identifier = this.childIdentifier(child);
+    if (!identifier) {
+      this.childSaving.set(false);
+      return;
+    }
+    try {
+      const updated = await this.parentService.updateChild(identifier as any, {
+        ...this.childForm(),
+      });
+      if (updated) {
+        const merged = { ...(child as any), ...updated } as Child;
+        this.child.set(merged);
+        this.prefillChildForm(merged);
+        this.childEditMode.set(false);
+        this.toastService.show('Child profile updated.', 'success');
+      }
+    } finally {
+      this.childSaving.set(false);
+    }
+  }
+
+  async deleteChild() {
+    const child = this.child();
+    if (!child) return;
+    this.childDeleting.set(true);
+    const identifier = this.childIdentifier(child);
+    if (!identifier) {
+      this.childDeleting.set(false);
+      return;
+    }
+    try {
+      const ok = await this.parentService.deleteChild(identifier as any);
+      if (ok) {
+        this.child.set(null);
+        this.childEditMode.set(false);
+        this.toastService.show('Child removed from your account.', 'success');
+      }
+    } finally {
+      this.childDeleting.set(false);
+      this.showDeleteConfirm.set(false);
+    }
+  }
+
+  childName() {
+    const c = this.child();
+    return c?.full_name || (c as any)?.name || 'Child';
+  }
+
+  childEmail() {
+    return this.child()?.email || 'Email not set';
+  }
+
+  childBirthday() {
+    return this.child()?.birthday || '';
+  }
+
+  childGradeLabel(): string {
+    return formatGrade(
+      this.childForm().grade ||
+        (this.child() as any)?.grade ||
+        ''
+    );
+  }
+
   private prefillFromToken() {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
@@ -436,7 +681,7 @@ export class Profile implements OnInit {
     return age;
   }
 
-  private parseBlockedDate(value?: string | Date): Date | null {
+  private parseBlockedDate(value?: string | Date | null): Date | null {
     if (!value) return null;
     if (value instanceof Date) {
       const d = value;
@@ -454,13 +699,13 @@ export class Profile implements OnInit {
     return candidate;
   }
 
-  formatBlockedTimestamp(value?: string) {
+  formatBlockedTimestamp(value?: string | null) {
     const date = this.parseBlockedDate(value);
     if (!date) return 'Unknown time';
     return formatDisplayTime(date);
   }
 
-  formatBlockedRelative(value?: string) {
+  formatBlockedRelative(value?: string | null) {
     const date = this.parseBlockedDate(value);
     if (!date) return 'recently';
 
@@ -493,5 +738,48 @@ export class Profile implements OnInit {
 
   gradeLabel(): string {
     return formatGrade(this.form().grade || this.profile()?.grade || '');
+  }
+
+  private prefillChildForm(child: Child) {
+    const birthday =
+      typeof child.birthday === 'string' && child.birthday.length >= 10
+        ? child.birthday.slice(0, 10)
+        : child.birthday || '';
+    this.childForm.set({
+      full_name: child.full_name || (child as any).name || '',
+      email: child.email || '',
+      birthday,
+      grade: ((child as any).grade as GradeValue) || '',
+      profile_editing_locked: !!child.profile_editing_locked,
+    });
+  }
+
+  guardianCreatedText(guardian: GuardianSummary): string {
+    const fallbackDate = guardian.approved_at || guardian.invited_at || guardian.created_at;
+    return this.formatBlockedRelative(fallbackDate);
+  }
+
+  siblingProgressValue(sibling: SiblingSummary): number {
+    const raw = sibling.level_progress;
+    if (!Number.isFinite(raw as any)) return 0;
+    return Math.min(100, Math.max(0, Number(raw)));
+  }
+
+  siblingLevelLabel(sibling: SiblingSummary): string {
+    if (Number.isFinite(sibling.level as any)) {
+      return `Level ${Number(sibling.level)}`;
+    }
+    return 'Level not set';
+  }
+
+  siblingLevelShortLabel(sibling: SiblingSummary): string {
+    if (Number.isFinite(sibling.level as any)) {
+      return `Lvl ${Number(sibling.level)}`;
+    }
+    return 'Lvl -';
+  }
+
+  siblingGradeLabel(sibling: SiblingSummary): string {
+    return formatGrade(sibling.grade || '');
   }
 }

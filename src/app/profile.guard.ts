@@ -19,8 +19,14 @@ export const ProfileGuard: CanActivateFn = async (): Promise<boolean | UrlTree> 
   await profileService.fetchProfile();
 
   // If the profile is still missing, redirect to settings page.
-  if (!profileService.profile()) {
+  const profile = profileService.profile();
+  if (!profile) {
     return router.createUrlTree(['/profile']);
+  }
+
+  const uuid = profile.uuid || (profile as any).google_id;
+  if (uuid) {
+    return router.createUrlTree(['/dashboard/profile', uuid]);
   }
 
   return true;

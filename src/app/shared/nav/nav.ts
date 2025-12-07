@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ProfileService } from 'src/app/services/profile';
 import { Avatar } from '../avatar/avatar';
@@ -13,6 +13,8 @@ import { Avatar } from '../avatar/avatar';
 export class Nav {
   private router = inject(Router);
   private profileService = inject(ProfileService);
+  @ViewChild('menuPanel') menuPanel?: ElementRef<HTMLElement>;
+  @ViewChild('menuButton') menuButton?: ElementRef<HTMLElement>;
 
   isLoggedIn = signal<boolean>(false);
   menuOpen = signal<boolean>(false);
@@ -64,11 +66,42 @@ export class Nav {
     this.menuOpen.set(false);
   }
 
+  profileUuid(): string {
+    const p = this.profile();
+    return p?.uuid || '';
+  }
+
+  profileLink(): any[] {
+    const uuid = this.profileUuid();
+    return uuid ? ['/dashboard/profile', uuid] : ['/profile'];
+  }
+
+  goToProfile(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.closeMenu();
+    this.router.navigate(this.profileLink());
+  }
+
   toggleMenu(): void {
     this.menuOpen.update((open) => !open);
   }
 
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  handleDocumentClick(event: Event): void {
+    if (!this.menuOpen()) return;
+    const target = event.target as Node | null;
+    const menuEl = this.menuPanel?.nativeElement;
+    const buttonEl = this.menuButton?.nativeElement;
+    if (target && (menuEl?.contains(target) || buttonEl?.contains(target))) {
+      return;
+    }
+    this.closeMenu();
   }
 }

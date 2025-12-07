@@ -3,7 +3,6 @@ import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { ToastService } from './toast';
-import { formatGrade } from 'src/app/shared/constants/grades';
 
 export interface ChildPayload {
   full_name: string;
@@ -55,6 +54,26 @@ export interface PaginatedGoals {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface GuardianSummary {
+  full_name?: string;
+  relation?: string | null;
+  invited_at?: string | null;
+  approved_at?: string | null;
+  status?: 'linked' | 'invited';
+  created_at?: string | null;
+  picture?: string | null;
+}
+
+export interface SiblingSummary {
+  full_name?: string;
+  grade?: string;
+  birthday?: string;
+  relation?: string | null;
+  level?: number | null;
+  level_progress?: number | null;
+  picture?: string | null;
 }
 
 type Decision = 'approve' | 'deny';
@@ -223,6 +242,51 @@ export class ParentService {
       `/children/${childId}/activity`,
       params
     ).catch(() => []);
+  }
+
+  async fetchChildGuardians(childId: number | string): Promise<GuardianSummary[]> {
+    if (!childId) return [];
+    try {
+      const guardians = await this.apiGet<any[]>(`/children/${childId}/guardians`);
+      return (guardians || []).map((g) => ({
+        full_name: g.full_name || g.name || 'Guardian',
+        relation: g.relation || g.relationship || null,
+        invited_at: g.invited_at || null,
+        approved_at: g.approved_at || null,
+        created_at: g.created_at || null,
+        picture: g.picture || null,
+        status: g.approved_at ? 'linked' : 'invited',
+      }));
+    } catch (err) {
+      console.error('ParentService: Failed to fetch child guardians', err);
+      this.toastService.show('Unable to load guardians right now.', 'error');
+      return [];
+    }
+  }
+
+  async fetchChildSiblings(childId: number | string): Promise<SiblingSummary[]> {
+    if (!childId) return [];
+    try {
+      const siblings = await this.apiGet<any[]>(`/children/${childId}/siblings`);
+      return (siblings || []).map((s) => ({
+        full_name: s.full_name || s.name || 'Sibling',
+        grade: this.normalizeGrade((s as any).grade),
+        birthday:
+          typeof s.birthday === 'string' && s.birthday.length >= 10
+            ? s.birthday.slice(0, 10)
+            : undefined,
+        relation: s.relation || s.relationship || null,
+        level: Number.isFinite(s.level) ? Number(s.level) : null,
+        level_progress: Number.isFinite(s.level_progress)
+          ? Math.max(0, Math.min(100, Number(s.level_progress)))
+          : null,
+        picture: s.picture || null,
+      }));
+    } catch (err) {
+      console.error('ParentService: Failed to fetch siblings', err);
+      this.toastService.show('Unable to load siblings right now.', 'error');
+      return [];
+    }
   }
 
   // --- Internal helpers -----------------------------------------------------

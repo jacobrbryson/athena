@@ -1,4 +1,306 @@
-<section class="profile-page">
+<section class="profile-page" [class.options-page]="viewMode() === 'child'">
+  <ng-container *ngIf="viewMode() === 'child'; else selfProfile">
+    <header class="profile-header">
+      <div>
+        <app-breadcrumb
+          [labels]="childBreadcrumbTrail()"
+          [disableDashboard]="false"
+        ></app-breadcrumb>
+        <h1>Profile</h1>
+        <p class="hint">Tune permissions and details for this child account.</p>
+      </div>
+    </header>
+
+    <ng-container *ngIf="!childLoading(); else childLoadingState">
+      <ng-container *ngIf="child(); else missingChild">
+        <div class="grid gap-5 items-start lg:grid-cols-3">
+          <div class="lg:col-span-2 space-y-4">
+            <div class="summary-card" *ngIf="!childEditMode()">
+              <div class="summary-header">
+                <div>
+                  <p class="eyebrow">Child profile</p>
+                  <h2>{{ childName() }}</h2>
+                  <p class="lede small email-inline">
+                    <app-masked-email [email]="childEmail()"></app-masked-email>
+                  </p>
+                </div>
+                <div class="actions top" *ngIf="child()">
+                  <button
+                    class="ghost"
+                    type="button"
+                    (click)="childEditMode() ? cancelChildEdit() : startChildEdit()"
+                    [disabled]="childSaving()"
+                  >
+                    {{ childEditMode() ? 'Cancel' : 'Edit profile' }}
+                  </button>
+                  <button
+                    class="refresh"
+                    type="button"
+                    *ngIf="childEditMode()"
+                    (click)="saveChildChanges()"
+                    [disabled]="childSaving()"
+                  >
+                    {{ childSaving() ? 'Saving...' : 'Save changes' }}
+                  </button>
+                </div>
+              </div>
+              <div class="row">
+                <div class="label">Birthday</div>
+                <div class="value">
+                  {{ childBirthday() ? (childBirthday() | date : 'MMMM d, y') : 'Not set' }}
+                </div>
+              </div>
+              <div class="row">
+                <div class="label">Grade</div>
+                <div class="value">
+                  {{ childGradeLabel() || 'Not set' }}
+                </div>
+              </div>
+              <div class="row">
+                <div class="label">Profile lock</div>
+                <div class="value chip-row">
+                  <div class="pill">
+                    <span class="pill-icon" aria-hidden="true">
+                      <svg
+                        *ngIf="childForm().profile_editing_locked"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="icon"
+                      >
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                      <svg
+                        *ngIf="!childForm().profile_editing_locked"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="icon unlocked"
+                      >
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M17 11V7a5 5 0 0 0-9.5-2" />
+                      </svg>
+                    </span>
+                    <span>
+                      {{
+                        childForm().profile_editing_locked
+                          ? 'Profile is locked'
+                          : 'Child can edit profile'
+                      }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" *ngIf="childEditMode()">
+              <p class="eyebrow">Manage profile</p>
+              <h2 class="card-title">Update details & permissions</h2>
+              <div class="field email-field">
+                <label>Email</label>
+                <app-masked-email [email]="childForm().email" variant="input"></app-masked-email>
+              </div>
+              <div class="field">
+                <label>Full name</label>
+                <input
+                  type="text"
+                  placeholder="Full name"
+                  [ngModel]="childForm().full_name"
+                  (ngModelChange)="updateChildField('full_name', $event)"
+                />
+              </div>
+              <div class="field">
+                <label>Birthday</label>
+                <input
+                  type="date"
+                  [ngModel]="childForm().birthday"
+                  (ngModelChange)="updateChildField('birthday', $event)"
+                />
+              </div>
+              <div class="field">
+                <label>Grade (optional)</label>
+                <select [ngModel]="childForm().grade" (ngModelChange)="updateChildGrade($event)">
+                  <option value="">Select a grade</option>
+                  <option *ngFor="let option of gradeOptions" [value]="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="toggle-field">
+                <div>
+                  <p class="label tight">Lock from being edited by child</p>
+                  <p class="hint">
+                    When enabled, the child cannot change their own profile details from the app.
+                  </p>
+                </div>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    [checked]="childForm().profile_editing_locked"
+                    (change)="toggleChildProfileLock($any($event.target).checked)"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="actions flex flex-wrap items-center justify-between gap-3 mt-4">
+                <button
+                  class="danger px-4 py-2 text-red-600 border border-red-200 bg-red-50 hover:bg-red-100"
+                  type="button"
+                  (click)="showDeleteConfirm.set(true)"
+                  [disabled]="childSaving() || childDeleting()"
+                >
+                  {{ childDeleting() ? 'Deleting...' : 'Delete' }}
+                </button>
+                <div class="flex items-center gap-3">
+                  <button
+                    class="ghost px-4 py-2"
+                    type="button"
+                    (click)="cancelChildEdit()"
+                    [disabled]="childSaving()"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    class="refresh px-4 py-2"
+                    type="button"
+                    (click)="saveChildChanges()"
+                    [disabled]="childSaving()"
+                  >
+                    {{ childSaving() ? 'Saving...' : 'Save changes' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="side-card space-y-4">
+            <section class="card">
+              <p class="eyebrow">Guardians</p>
+              <ng-container *ngIf="childGuardiansLoading(); else childGuardiansContent">
+                <p class="hint">Loading guardians...</p>
+              </ng-container>
+              <ng-template #childGuardiansContent>
+                <div *ngIf="childGuardians().length; else emptyChildGuardians" class="summary">
+                  <div
+                    class="slim flex items-center gap-3"
+                    *ngFor="let guardian of childGuardians()"
+                  >
+                    <app-avatar
+                      [picture]="guardian.picture || null"
+                      [full_name]="guardian.full_name || 'Guardian'"
+                      sizeClass="w-10 h-10"
+                      bgClass="bg-slate-200"
+                      borderClass="border border-slate-100"
+                    ></app-avatar>
+                    <div class="flex flex-col justify-center">
+                      <div>{{ guardian.full_name || 'Name unavailable' }}</div>
+                      <p class="hint tight">Profile created {{ guardianCreatedText(guardian) }}</p>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #emptyChildGuardians>
+                  <div class="empty">
+                    <p class="blocked-name">No guardians yet</p>
+                    <p class="hint">Invite a parent or guardian to link their account.</p>
+                  </div>
+                </ng-template>
+              </ng-template>
+            </section>
+
+            <section class="card">
+              <p class="eyebrow">Siblings</p>
+              <ng-container *ngIf="childSiblingsLoading(); else childSiblingsContent">
+                <p class="hint">Loading siblings...</p>
+              </ng-container>
+              <ng-template #childSiblingsContent>
+                <div *ngIf="childSiblings().length; else emptyChildSiblings" class="summary">
+                  <div class="row slim" *ngFor="let sibling of childSiblings()">
+                    <div class="value flex items-center justify-between gap-3 w-full">
+                      <div class="flex items-center gap-3 flex-1">
+                        <app-avatar
+                          [picture]="sibling.picture || null"
+                          [full_name]="sibling.full_name || 'Sibling'"
+                          sizeClass="w-10 h-10"
+                          bgClass="bg-indigo-200"
+                          borderClass="border border-indigo-100"
+                        ></app-avatar>
+                        <div class="flex-1">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-semibold">{{ sibling.full_name || 'Sibling' }}</span>
+                            <span class="text-sm text-slate-600">{{
+                              siblingGradeLabel(sibling) || 'Grade not set'
+                            }}</span>
+                          </div>
+                          <div class="flex items-center gap-2 w-full mt-1">
+                            <span class="whitespace-nowrap">{{
+                              siblingLevelShortLabel(sibling)
+                            }}</span>
+                            <div class="flex-1">
+                              <app-animated-progress-bar
+                                [value]="siblingProgressValue(sibling)"
+                                [duration]="400"
+                                [height]="8"
+                                [rounded]="true"
+                                [showValue]="true"
+                              ></app-animated-progress-bar>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #emptyChildSiblings>
+                  <div class="empty">
+                    <p class="blocked-name">No siblings listed</p>
+                    <p class="hint">Siblings linked to this account will appear here.</p>
+                  </div>
+                </ng-template>
+              </ng-template>
+            </section>
+          </div>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <ng-template #childLoadingState>
+      <div class="card">
+        <p class="hint">Loading child options...</p>
+      </div>
+    </ng-template>
+
+    <ng-template #missingChild>
+      <div class="card">
+        <p class="hint">We couldn't find that child for your account.</p>
+      </div>
+    </ng-template>
+
+    <app-confirm-dialog
+      *ngIf="showDeleteConfirm()"
+      title="Remove child"
+      message="Are you sure you want to remove this child? This will disable their access until re-added."
+      confirmLabel="Remove child"
+      cancelLabel="Cancel"
+      confirmStyle="danger"
+      [busy]="childDeleting()"
+      (confirmed)="deleteChild()"
+      (cancelled)="showDeleteConfirm.set(false)"
+    ></app-confirm-dialog>
+  </ng-container>
+</section>
+
+<ng-template #selfProfile>
   <header class="profile-header">
     <div>
       <app-breadcrumb
@@ -12,240 +314,265 @@
 
   <div class="grid gap-5 items-start lg:grid-cols-3">
     <div class="lg:col-span-2">
-  <ng-container *ngIf="!profileLocked(); else lockedProfile">
-    <ng-container *ngIf="profileComplete() && !editing(); else editFlow">
-    <div class="summary-card">
-      <div class="summary-header">
-        <div>
-          <p class="eyebrow">Profile</p>
-          <h2>{{ profile()?.full_name || 'Name not set' }}</h2>
-          <p class="lede small">
-            <app-masked-email [email]="profile()?.email || 'Email not set'"></app-masked-email>
-          </p>
-        </div>
-        <button class="ghost" type="button" (click)="startEdit()" [disabled]="profileLocked()">Edit profile</button>
-      </div>
+      <ng-container *ngIf="!profileLocked(); else lockedProfile">
+        <ng-container *ngIf="profileComplete() && !editing(); else editFlow">
+          <div class="summary-card">
+            <div class="summary-header">
+              <div>
+                <p class="eyebrow">Profile</p>
+                <h2>{{ profile()?.full_name || 'Name not set' }}</h2>
+                <p class="lede small">
+                  <app-masked-email
+                    [email]="profile()?.email || 'Email not set'"
+                  ></app-masked-email>
+                </p>
+              </div>
+              <button
+                class="ghost"
+                type="button"
+                (click)="startEdit()"
+                [disabled]="profileLocked()"
+              >
+                Edit profile
+              </button>
+            </div>
 
-      <div class="row">
-        <div class="label">Birthday</div>
-        <div class="value">{{ profile()?.birthday || '-' }}</div>
-      </div>
-      <div class="row">
-        <div class="label">Grade</div>
-        <div class="value">{{ profile()?.grade ? gradeLabel() : 'Not set' }}</div>
-      </div>
-      <div class="row" *ngIf="(age() ?? 0) >= 18">
-        <div class="label">Roles</div>
-        <div class="value">
-          <span *ngIf="profile()?.is_guardian">Parent</span>
-          <span *ngIf="profile()?.is_guardian && profile()?.is_teacher"> / </span>
-          <span *ngIf="profile()?.is_teacher">Teacher</span>
-          <span *ngIf="!profile()?.is_guardian && !profile()?.is_teacher">—</span>
-        </div>
-      </div>
-    </div>
-  </ng-container>
-
-  </ng-container>
-
-  <ng-template #editFlow>
-    <div class="stepper">
-      <div class="steps">
-        <button
-          class="step"
-          type="button"
-          [class.active]="currentStep() === 1"
-          [disabled]="currentStep() === 1"
-          (click)="goToStep(1)"
-        >
-          1. Basics
-        </button>
-        <button
-          class="step"
-          type="button"
-          [class.active]="currentStep() === 2"
-          [disabled]="currentStep() === 2 || saving() || !form().birthday"
-          (click)="goToStep(2)"
-        >
-          2. Next steps
-        </button>
-      </div>
-
-      <div class="step-card" *ngIf="currentStep() === 1">
-        <p class="eyebrow">Step 1</p>
-        <h2>Confirm your details</h2>
-        <p class="hint">We pulled these from Google; please add your birthday to continue.</p>
-
-        <div class="field">
-          <label>Email</label>
-          <input type="email" [ngModel]="form().email" readonly disabled />
-        </div>
-
-        <div class="field">
-          <label>Full name</label>
-          <input type="text" [ngModel]="form().full_name" readonly disabled />
-        </div>
-
-        <div class="field">
-          <label>Birthday</label>
-          <input type="date" [ngModel]="form().birthday" (ngModelChange)="updateBirthday($event)" />
-        </div>
-        <div class="field">
-          <label>Grade (optional)</label>
-          <select
-            [ngModel]="form().grade"
-            (ngModelChange)="updateGrade($event)"
-          >
-            <option value="">Select a grade</option>
-            <option *ngFor="let option of gradeOptions" [value]="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-        <p class="hint">
-          Athena's Learning Companion is designed for users under 18. Kids under 13 need a parent or
-          guardian’s approval, while those 18+ can use the app as a parent and/or teacher.
-        </p>
-
-        <div class="actions">
-          <button
-            class="refresh"
-            type="button"
-            (click)="nextStep()"
-            [disabled]="!form().birthday || saving()"
-          >
-            {{ saving() ? 'Saving...' : 'Save and continue' }}
-          </button>
-        </div>
-      </div>
-
-      <div class="step-card" *ngIf="currentStep() === 2">
-        <p class="eyebrow">Step 2</p>
-        <h2 *ngIf="ageBucket() === 'under13'">We need a parent to continue</h2>
-        <h2 *ngIf="ageBucket() === 'adult'">How do you want to use Athena?</h2>
-
-        <div *ngIf="ageBucket() === 'under13'" class="gate">
-          <div class="gate-header">
-            <span class="gate-icon">⚠️</span>
-            <div>
-              <p><strong>Under 13 requires a parent account.</strong></p>
-              <p>To keep you safe, a parent or guardian needs to sign in and add you as a child.</p>
+            <div class="row">
+              <div class="label">Birthday</div>
+              <div class="value">{{ profile()?.birthday || '-' }}</div>
+            </div>
+            <div class="row">
+              <div class="label">Grade</div>
+              <div class="value">{{ profile()?.grade ? gradeLabel() : 'Not set' }}</div>
+            </div>
+            <div class="row" *ngIf="(age() ?? 0) >= 18">
+              <div class="label">Roles</div>
+              <div class="value">
+                <span *ngIf="profile()?.is_guardian">Parent</span>
+                <span *ngIf="profile()?.is_guardian && profile()?.is_teacher"> / </span>
+                <span *ngIf="profile()?.is_teacher">Teacher</span>
+                <span *ngIf="!profile()?.is_guardian && !profile()?.is_teacher">Not set</span>
+              </div>
             </div>
           </div>
-          <p class="hint">Please ask a parent to continue from their account.</p>
-          <p class="hint">
-            Enter your parent or guardian's email and we'll send them a link to get started.
-          </p>
-          <div class="field">
-            <label>Parent or guardian email</label>
-            <input
-              type="email"
-              placeholder="parent@example.com"
-              [ngModel]="parentEmail()"
-              (ngModelChange)="onParentEmailChange($event)"
-              [class.error]="!!parentEmailError()"
-              data-sitekey="6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5"
-            />
-            <p class="error" *ngIf="parentEmailError()">{{ parentEmailError() }}</p>
-          </div>
-          <div class="actions">
-            <button
-              class="refresh"
-              type="button"
-              (click)="sendParentInvite()"
-              [disabled]="sendingInvite() || !!parentEmailError() || !parentEmail()"
-            >
-              {{ sendingInvite() ? 'Sending...' : 'Send invite' }}
-            </button>
-            <p class="hint success" *ngIf="inviteMessage()">{{ inviteMessage() }}</p>
-          </div>
-          <div id="recaptcha-container" hidden data-sitekey="6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5"></div>
-        </div>
+        </ng-container>
+      </ng-container>
 
-        <div *ngIf="ageBucket() === 'adult'" class="selector">
-          <p class="hint">Select all that apply:</p>
-          <label class="chip">
-            <input type="checkbox" [checked]="form().is_guardian" (change)="toggleRole('parent')" />
-            <span>Parent</span>
-          </label>
-          <label class="chip">
-            <input type="checkbox" [checked]="form().is_teacher" (change)="toggleRole('teacher')" />
-            <span>Teacher</span>
-          </label>
-          <p class="hint">You can choose one or both.</p>
-          <div class="actions">
+      <ng-template #editFlow>
+        <div class="stepper">
+          <div class="steps">
             <button
-              class="refresh"
+              class="step"
               type="button"
-              (click)="goToDashboard()"
-              [disabled]="!canContinueAdult()"
+              [class.active]="currentStep() === 1"
+              [disabled]="currentStep() === 1"
+              (click)="goToStep(1)"
             >
-              Save and continue
+              1. Basics
+            </button>
+            <button
+              class="step"
+              type="button"
+              [class.active]="currentStep() === 2"
+              [disabled]="currentStep() === 2 || saving() || !form().birthday"
+              (click)="goToStep(2)"
+            >
+              2. Next steps
             </button>
           </div>
-        </div>
 
-        <div *ngIf="ageBucket() === 'unknown'" class="gate">
-          <p>We need your birthday to determine the right experience.</p>
-          <button class="ghost" type="button" (click)="currentStep.set(1)">Back to birthday</button>
-        </div>
-      </div>
-    </div>
-  </ng-template>
+          <div class="step-card" *ngIf="currentStep() === 1">
+            <p class="eyebrow">Step 1</p>
+            <h2>Confirm your details</h2>
+            <p class="hint">We pulled these from Google; please add your birthday to continue.</p>
 
-  <ng-template #lockedProfile>
-    <div class="summary-card">
-      <div class="summary-header">
-        <div>
-          <p class="eyebrow">Profile locked</p>
-          <h2>{{ profile()?.full_name || profile()?.email || 'Profile' }}</h2>
-          <p class="lede small">A parent or guardian has disabled editing for this profile.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="label">Email</div>
-        <div class="value">
-          <app-masked-email [email]="profile()?.email || 'Email not set'"></app-masked-email>
-        </div>
-      </div>
-      <div class="row">
-        <div class="label">Birthday</div>
-        <div class="value">{{ profile()?.birthday || 'Birthday not set' }}</div>
-      </div>
-      <div class="row">
-        <div class="label">Grade</div>
-        <div class="value">{{ profile()?.grade ? gradeLabel() : 'Not set' }}</div>
-      </div>
-    </div>
-  </ng-template>
+            <div class="field">
+              <label>Email</label>
+              <input type="email" [ngModel]="form().email" readonly disabled />
+            </div>
 
-    </div>
+            <div class="field">
+              <label>Full name</label>
+              <input type="text" [ngModel]="form().full_name" readonly disabled />
+            </div>
 
-  <section
-    class="card blocklist-card lg:mt-0"
-    *ngIf="ageBucket() === 'adult'; else guardiansCard"
-  >
-    <div class="blocklist-header">
-      <div>
-        <p class="eyebrow">Blocked requests</p>
-        <p class="hint">Children you blocked will not be able to request access again.</p>
-      </div>
-    </div>
-
-    <ng-container *ngIf="blocklistLoading(); else blocklistContent">
-      <p class="hint">Loading blocked requests...</p>
-    </ng-container>
-    <ng-template #blocklistContent>
-      <div *ngIf="blocklist().length; else emptyBlocklist" class="blocklist-list">
-        <div class="blocked-row" *ngFor="let blocked of blocklist()">
-          <div class="blocked-meta">
-            <p class="blocked-name">{{ blocked.full_name || 'Unknown child' }}</p>
-            <p class="blocked-email">{{ blocked.email || 'Email unavailable' }}</p>
-            <p class="blocked-date" [title]="formatBlockedTimestamp(blocked.blocked_at)">
-              Blocked {{ formatBlockedRelative(blocked.blocked_at) }}
+            <div class="field">
+              <label>Birthday</label>
+              <input
+                type="date"
+                [ngModel]="form().birthday"
+                (ngModelChange)="updateBirthday($event)"
+              />
+            </div>
+            <div class="field">
+              <label>Grade (optional)</label>
+              <select [ngModel]="form().grade" (ngModelChange)="updateGrade($event)">
+                <option value="">Select a grade</option>
+                <option *ngFor="let option of gradeOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+            <p class="hint">
+              Athena's Learning Companion is designed for users under 18. Kids under 13 need a
+              parent or guardian's approval, while those 18+ can use the app as a parent and/or
+              teacher.
             </p>
+
+            <div class="actions">
+              <button
+                class="refresh"
+                type="button"
+                (click)="nextStep()"
+                [disabled]="!form().birthday || saving()"
+              >
+                {{ saving() ? 'Saving...' : 'Save and continue' }}
+              </button>
+            </div>
           </div>
-          <div class="blocked-actions">
+
+          <div class="step-card" *ngIf="currentStep() === 2">
+            <p class="eyebrow">Step 2</p>
+            <h2 *ngIf="ageBucket() === 'under13'">We need a parent to continue</h2>
+            <h2 *ngIf="ageBucket() === 'adult'">How do you want to use Athena?</h2>
+
+            <div *ngIf="ageBucket() === 'under13'" class="gate">
+              <div class="gate-header">
+                <span class="gate-icon">!</span>
+                <div>
+                  <p><strong>Under 13 requires a parent account.</strong></p>
+                  <p>
+                    To keep you safe, a parent or guardian needs to sign in and add you as a child.
+                  </p>
+                </div>
+              </div>
+              <p class="hint">Please ask a parent to continue from their account.</p>
+              <p class="hint">
+                Enter your parent or guardian's email and we'll send them a link to get started.
+              </p>
+              <div class="field">
+                <label>Parent or guardian email</label>
+                <input
+                  type="email"
+                  placeholder="parent@example.com"
+                  [ngModel]="parentEmail()"
+                  (ngModelChange)="onParentEmailChange($event)"
+                  [class.error]="!!parentEmailError()"
+                  data-sitekey="6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5"
+                />
+                <p class="error" *ngIf="parentEmailError()">{{ parentEmailError() }}</p>
+              </div>
+              <div class="actions">
+                <button
+                  class="refresh"
+                  type="button"
+                  (click)="sendParentInvite()"
+                  [disabled]="sendingInvite() || !!parentEmailError() || !parentEmail()"
+                >
+                  {{ sendingInvite() ? 'Sending...' : 'Send invite' }}
+                </button>
+                <p class="hint success" *ngIf="inviteMessage()">{{ inviteMessage() }}</p>
+              </div>
+              <div
+                id="recaptcha-container"
+                hidden
+                data-sitekey="6Lc2OiAsAAAAAHZXE64gzTrmdKvvxVMjqdxUa8O5"
+              ></div>
+            </div>
+
+            <div *ngIf="ageBucket() === 'adult'" class="selector">
+              <p class="hint">Select all that apply:</p>
+              <label class="chip">
+                <input
+                  type="checkbox"
+                  [checked]="form().is_guardian"
+                  (change)="toggleRole('parent')"
+                />
+                <span>Parent</span>
+              </label>
+              <label class="chip">
+                <input
+                  type="checkbox"
+                  [checked]="form().is_teacher"
+                  (change)="toggleRole('teacher')"
+                />
+                <span>Teacher</span>
+              </label>
+              <p class="hint">You can choose one or both.</p>
+              <div class="actions">
+                <button
+                  class="refresh"
+                  type="button"
+                  (click)="goToDashboard()"
+                  [disabled]="!canContinueAdult()"
+                >
+                  Save and continue
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="ageBucket() === 'unknown'" class="gate">
+              <p>We need your birthday to determine the right experience.</p>
+              <button class="ghost" type="button" (click)="currentStep.set(1)">
+                Back to birthday
+              </button>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #lockedProfile>
+        <div class="summary-card">
+          <div class="summary-header">
+            <div>
+              <p class="eyebrow">Profile locked</p>
+              <h2>{{ profile()?.full_name || profile()?.email || 'Profile' }}</h2>
+              <p class="lede small">A parent or guardian has disabled editing for this profile.</p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Email</div>
+            <div class="value">
+              <app-masked-email [email]="profile()?.email || 'Email not set'"></app-masked-email>
+            </div>
+          </div>
+          <div class="row">
+            <div class="label">Birthday</div>
+            <div class="value">{{ profile()?.birthday || 'Birthday not set' }}</div>
+          </div>
+          <div class="row">
+            <div class="label">Grade</div>
+            <div class="value">{{ profile()?.grade ? gradeLabel() : 'Not set' }}</div>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+
+    <section
+      class="card blocklist-card lg:mt-0"
+      *ngIf="ageBucket() === 'adult'; else guardiansCard"
+    >
+      <div class="blocklist-header">
+        <div>
+          <p class="eyebrow">Blocked requests</p>
+          <p class="hint">Children you blocked will not be able to request access again.</p>
+        </div>
+      </div>
+
+      <ng-container *ngIf="blocklistLoading(); else blocklistContent">
+        <p class="hint">Loading blocked requests...</p>
+      </ng-container>
+      <ng-template #blocklistContent>
+        <div *ngIf="blocklist().length; else emptyBlocklist" class="blocklist-list">
+          <div class="blocked-row" *ngFor="let blocked of blocklist()">
+            <div class="blocked-meta">
+              <p class="blocked-name">{{ blocked.full_name || 'Unknown child' }}</p>
+              <p class="blocked-email">{{ blocked.email || 'Email unavailable' }}</p>
+              <p class="blocked-date" [title]="formatBlockedTimestamp(blocked.blocked_at)">
+                Blocked {{ formatBlockedRelative(blocked.blocked_at) }}
+              </p>
+            </div>
+            <div class="blocked-actions">
               <button
                 class="ghost"
                 type="button"
@@ -262,52 +589,54 @@
               >
                 Unblock & add child
               </button>
-          </div>
-        </div>
-      </div>
-      <ng-template #emptyBlocklist>
-        <div class="empty">
-          <p class="blocked-name">No blocked requests</p>
-          <p class="hint">When you block a request, it will appear here with an option to undo.</p>
-        </div>
-      </ng-template>
-    </ng-template>
-  </section>
-  <ng-template #guardiansCard>
-    <section class="card blocklist-card lg:mt-0">
-      <div class="blocklist-header">
-        <div>
-          <p class="eyebrow">Parents / Guardians</p>
-          <p class="hint">People linked to your account as guardians.</p>
-        </div>
-      </div>
-
-      <ng-container *ngIf="guardiansLoading(); else guardiansContent">
-        <p class="hint">Loading parents/guardians...</p>
-      </ng-container>
-      <ng-template #guardiansContent>
-        <div *ngIf="guardians().length; else emptyGuardians" class="blocklist-list">
-          <div class="blocked-row" *ngFor="let guardian of guardians()">
-            <div class="blocked-meta">
-              <p class="blocked-name">{{ guardian.full_name || 'Guardian' }}</p>
-              <p class="blocked-email">{{ guardian.email || 'Email unavailable' }}</p>
-              <p
-                class="blocked-date"
-                [title]="formatBlockedTimestamp(guardian.approved_at || guardian.invited_at)"
-              >
-                Linked {{ formatBlockedRelative(guardian.approved_at || guardian.invited_at) }}
-              </p>
             </div>
           </div>
         </div>
-        <ng-template #emptyGuardians>
+        <ng-template #emptyBlocklist>
           <div class="empty">
-            <p class="blocked-name">No parents or guardians linked</p>
-            <p class="hint">Ask a parent or guardian to connect to your account.</p>
+            <p class="blocked-name">No blocked requests</p>
+            <p class="hint">
+              When you block a request, it will appear here with an option to undo.
+            </p>
           </div>
         </ng-template>
       </ng-template>
     </section>
-  </ng-template>
+    <ng-template #guardiansCard>
+      <section class="card blocklist-card lg:mt-0">
+        <div class="blocklist-header">
+          <div>
+            <p class="eyebrow">Parents / Guardians</p>
+            <p class="hint tight">People linked to your account as guardians.</p>
+          </div>
+        </div>
+
+        <ng-container *ngIf="guardiansLoading(); else guardiansContent">
+          <p class="hint">Loading parents/guardians...</p>
+        </ng-container>
+        <ng-template #guardiansContent>
+          <div *ngIf="guardians().length; else emptyGuardians" class="blocklist-list">
+            <div class="blocked-row" *ngFor="let guardian of guardians()">
+              <div class="blocked-meta">
+                <p class="blocked-name">{{ guardian.full_name || 'Guardian' }}</p>
+                <p class="blocked-email">{{ guardian.email || 'Email unavailable' }}</p>
+                <p
+                  class="blocked-date"
+                  [title]="formatBlockedTimestamp(guardian.approved_at || guardian.invited_at)"
+                >
+                  Linked {{ formatBlockedRelative(guardian.approved_at || guardian.invited_at) }}
+                </p>
+              </div>
+            </div>
+          </div>
+          <ng-template #emptyGuardians>
+            <div class="empty">
+              <p class="blocked-name">No parents or guardians linked</p>
+              <p class="hint">Ask a parent or guardian to connect to your account.</p>
+            </div>
+          </ng-template>
+        </ng-template>
+      </section>
+    </ng-template>
   </div>
-</section>
+</ng-template>

@@ -28,10 +28,13 @@ export class Breadcrumb implements OnDestroy {
   private sub: Subscription;
 
   constructor(private router: Router) {
-    this.isOnProfile = this.router.url.startsWith('/profile');
+    const profilePrefix = '/dashboard/profile';
+    this.isOnProfile =
+      this.router.url.startsWith(profilePrefix) || this.router.url.startsWith('/profile');
     this.sub = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        this.isOnProfile = event.urlAfterRedirects.startsWith('/profile');
+        const url = event.urlAfterRedirects;
+        this.isOnProfile = url.startsWith(profilePrefix) || url.startsWith('/profile');
       }
     });
   }
