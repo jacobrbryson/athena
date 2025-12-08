@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { asset } from 'src/app/asset';
+import { UnityPlayerComponent } from 'src/app/shared/unity/unity';
 import { Chat } from './sections/chat/chat';
-import { Interests } from './sections/interests/interests';
 import { LearningTargets } from './sections/learning-targets/learning-targets';
 
 @Component({
@@ -9,7 +9,7 @@ import { LearningTargets } from './sections/learning-targets/learning-targets';
   standalone: true,
   templateUrl: './kids.html',
   styleUrls: ['./kids.css'],
-  imports: [Chat, LearningTargets, Interests],
+  imports: [Chat, LearningTargets, UnityPlayerComponent],
 })
 export class Kids {
   asset = asset;

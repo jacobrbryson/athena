@@ -1,20 +1,48 @@
-/* Card container */
-.unity-card {
-  background: #fff7ed;
-  border: 4px solid #ffd67b;
-  border-radius: 30px;
-  box-shadow: 0 8px 0 #d7b464;
-  overflow: visible; /* important for input visibility */
+/* Messages area */
+.messages-container {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column-reverse; /* anchor content at the bottom */
+  max-height: 600px;
+}
+.message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+.message-row {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f7f9ff;
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+.message-row[data-role='athena'] {
+  background: #eef2ff;
+}
+.message-row[data-role='user'] {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+.message-row .meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+.message-row .body {
+  font-size: 14px;
+  color: #111827;
+  white-space: pre-wrap;
 }
 
-/* Chat messages */
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-bottom: 0.5rem;
+.empty {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 12px;
 }

@@ -1,20 +1,27 @@
 <div class="fun-panel mt-3 flex flex-col h-full">
-  @if (sessionId() !== null) {
-  <app-unity-player />
-  } @else {
-  <div class="flex items-center justify-center h-full text-gray-500 py-10">Loading session...</div>
-  }
+  <div class="messages-container" #messagesContainer>
+    @if (messages().length === 0) {
+    <div class="empty">No messages yet.</div>
+    } @if (messages().length > 0) {
+    <ol class="message-list">
+      @for (m of messages(); track trackById($index, m)) {
+      <li class="message-row" [attr.data-role]="m.is_human ? 'user' : 'athena'">
+        <div class="meta">
+          <span class="role">{{ m.is_human ? 'You' : 'Athena' }}</span>
+          @if (m.created_at) {
+          <span class="time"> • {{ formatTimestamp(m.created_at) }}</span>
+          }
+        </div>
+        <div class="body">{{ m.text }}</div>
+      </li>
+      }
+    </ol>
+    }
+  </div>
 
   <app-chat-input
     [message]="message"
     [isSending]="isSending"
     [sendMessage]="sendMessage"
   ></app-chat-input>
-  <app-chat-preview
-    [messages]="messages()"
-    [message]="message"
-    [isSending]="isSending"
-    [sendMessage]="sendMessage"
-    [isThinking]="isThinking()"
-  ></app-chat-preview>
 </div>

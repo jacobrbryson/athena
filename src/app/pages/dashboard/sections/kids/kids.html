@@ -4,21 +4,12 @@
   aria-labelledby="kid-tab"
   class="p-6 md:p-10 bg-amber-50 rounded-[30px] shadow-[0_8px_0_#d7b464] border-4 border-amber-300 cartoon-panel"
 >
-  <!-- Fun Game Header -->
-  <div class="flex items-center gap-3 pb-8 mb-8">
-    <img [src]="asset('star.png')" class="h-10 w-10" alt="" />
-    <h2 class="text-4xl font-extrabold text-amber-800 tracking-wide game-title">
-      Your Role: The Expert Tutor!
-    </h2>
-    <img [src]="asset('star.png')" class="h-10 w-10" alt="" />
-  </div>
-
   <!-- Main Grid -->
   <div class="grid md:grid-cols-3 gap-8">
     <!-- Chat Panel -->
     <div class="gamified-card">
       <div class="panel-header">
-        <span class="panel-header-text">Athena Chat</span>
+        <span class="panel-header-text">Chat</span>
       </div>
       <app-chat />
     </div>
@@ -31,12 +22,12 @@
       <app-learning-targets />
     </div>
 
-    <!-- Interests Panel -->
+    <!-- Unity Player Panel -->
     <div class="gamified-card">
       <div class="panel-header">
-        <span class="panel-header-text">Athena’s Interests</span>
+        <span class="panel-header-text">Athena</span>
       </div>
-      <app-interests />
+      <app-unity-player />
     </div>
   </div>
 </div>

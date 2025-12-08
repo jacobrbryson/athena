@@ -1,21 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ChatService } from 'src/app/services/chat'; // Import the new interface
-import { UnityPlayerComponent } from 'src/app/shared/unity/unity';
+import { ChatService, Message } from 'src/app/services/chat'; // Import the new interface
 import { ChatInput } from '../shared/chat-input/chat-input';
-import { ChatPreviewComponent } from './chat-preview/chat-preview';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule, UnityPlayerComponent, ChatPreviewComponent, ChatInput],
+  imports: [CommonModule, FormsModule, ChatInput],
   templateUrl: './chat.html',
   styleUrls: ['./chat.css'],
 })
 export class Chat implements OnInit, OnDestroy {
-  @ViewChild(ChatPreviewComponent) chatPreview!: ChatPreviewComponent;
-  @ViewChild(ChatInput) chatInputComponent!: ChatInput;
+  @ViewChild('messagesContainer') messagesContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild(ChatInput) chatInputComponent?: ChatInput;
 
   private chatService = inject(ChatService);
 
@@ -47,10 +45,6 @@ export class Chat implements OnInit, OnDestroy {
     // Check pre-requisites
     if (!text || this.isSending()) return;
 
-    if (this.chatPreview && !this.chatPreview.isDrawerOpen) {
-      this.chatPreview.openDrawer();
-    }
-
     this.isSending.set(true);
     this.message.set('');
 
@@ -63,7 +57,31 @@ export class Chat implements OnInit, OnDestroy {
       this.isThinking.set(false);
     } finally {
       this.isSending.set(false);
-      this.chatPreview.focusInput();
+      this.focusInput();
+      this.scrollToBottom();
     }
+  }
+
+  scrollToBottom() {
+    const el = this.messagesContainer?.nativeElement;
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+
+  trackById(index: number, item: Message) {
+    return item.uuid ?? index;
+  }
+
+  formatTimestamp(ts?: string | number) {
+    if (!ts) return '';
+    try {
+      const d = typeof ts === 'number' ? new Date(ts) : new Date(ts);
+      return d.toLocaleString();
+    } catch {
+      return String(ts);
+    }
+  }
+
+  private focusInput() {
+    this.chatInputComponent?.focusInput();
   }
 }
