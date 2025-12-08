@@ -238,7 +238,13 @@ export class ChatService {
     const session = this.sessionId();
     if (!session) return;
 
-    const wsUrl = environment.proxyServer.replace('http', 'ws') + `/ws?sessionId=${session}`;
+    const token = localStorage.getItem('auth_token') || '';
+    const params = new URLSearchParams({ sessionId: session });
+    if (token) {
+      params.set('token', token);
+    }
+
+    const wsUrl = environment.proxyServer.replace('http', 'ws') + `/ws?${params.toString()}`;
 
     console.log('ChatService: Connecting WebSocket:', wsUrl);
     this.ws = new WebSocket(wsUrl);
