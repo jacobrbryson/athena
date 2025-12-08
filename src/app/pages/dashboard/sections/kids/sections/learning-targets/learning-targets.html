@@ -1,4 +1,4 @@
-<div class="targets-list space-y-3 flex-1 overflow-y-auto mt-4">
+<div class="targets-list space-y-3 flex-1 overflow-y-auto">
   @for (target of learningTargets(); track target.id) {
   <div class="target-card">
     <div>
@@ -17,7 +17,7 @@
     </div>
   </div>
   } @empty {
-  <div class="quest-card mt-3 p-4 text-center relative mb-4">
+  <div class="quest-card text-center relative mb-4">
     <p class="quest-title mb-2">🌟To get started</p>
     <p class="quest-text">Teach Athena something, anything!</p>
   </div>
