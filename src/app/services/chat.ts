@@ -310,14 +310,13 @@ export class ChatService {
 
     const token = localStorage.getItem('auth_token') || '';
     const params = new URLSearchParams({ sessionId: session });
-    if (token) {
-      params.set('token', token);
-    }
+    // The sign-in token rides in the subprotocol list, never the URL: request
+    // logs record every URL, and this token is the whole sign-in.
+    const protocols = token ? ['athena.v1', `athena.ticket.${token}`] : ['athena.v1'];
 
     const wsUrl = environment.proxyServer.replace('http', 'ws') + `/ws?${params.toString()}`;
 
-    console.log('ChatService: Connecting WebSocket:', wsUrl);
-    this.ws = new WebSocket(wsUrl);
+    this.ws = new WebSocket(wsUrl, protocols);
 
     this.ws.onopen = () => {
       console.log('✅ ChatService: WebSocket connected');

@@ -1,7 +1,6 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { asset } from 'src/app/asset';
 import { ChatService } from 'src/app/services/chat';
-import { environment } from 'src/environments/environment';
 import { UnityBridgeService } from './unity-bridge.service';
 
 declare global {
@@ -70,37 +69,17 @@ export class UnityPlayerComponent implements OnInit, OnDestroy {
   private unityInstance: { SendMessage: (gameObject: string, methodName: string, parameter?: string) => void } | null =
     null;
 
+  // Unity used to open a second socket of its own with the sign-in token in
+  // its URL. All it did with it was wave on connect and follow thinking; the
+  // page does both now — "connected" makes it wave, and the effect below
+  // mirrors the chat's thinking state.
   private readonly handleUnityReadyForWebSocket = () => {
-    console.log('[Angular] Received athena-unity-ready-for-websocket');
-
-    const sessionId = this.chatService.sessionId();
-    const token = localStorage.getItem('auth_token') || '';
-
-    if (!sessionId || !token) {
-      console.warn('[Angular] Missing sessionId or token for Unity websocket.', {
-        hasSessionId: !!sessionId,
-        hasToken: !!token,
-      });
-      return;
-    }
-
-    const params = new URLSearchParams({ sessionId, token });
-    const wsUrl = environment.proxyServer.replace('http', 'ws') + `/ws?${params.toString()}`;
-    const payload = JSON.stringify({
-      wsUrl,
-      sessionId,
-      token,
-    });
-
-    console.log('[Angular] Sending websocket config to Unity', {
-      sessionId,
-      hasToken: true,
-      wsUrl,
-    });
-
-    this.unityBridge.sendToGameObject('AthenaSocketBridge', 'ConfigureWebSocket', payload);
-    this.unityBridge.sendToGameObject('AthenaSocketBridge', 'ConnectWebSocket');
+    this.unityBridge.sendToGameObject('AthenaSocketBridge', 'OnWebSocketConnected');
   };
+
+  private readonly followThinking = effect(() => {
+    this.unityBridge.setThinking(this.chatService.isThinking());
+  });
 
   private readonly handleUnityWebSocketConnected = () => {
     console.log('[Angular] Received athena-unity-websocket-connected');
